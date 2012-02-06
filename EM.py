@@ -5,7 +5,7 @@ from numpy import matrix
 from numpy import array
 #from numpy import *
 #from scipy import *
-from data import *
+from basis import *
 
 # this module contains a class that performs EM
 # clustering.  The input data is in the 'machine' format
@@ -79,6 +79,8 @@ class EM:
 
         while not convergence():
             lLastCenters = lCenters[:]
+            print "new iter, last centers are: "
+            print lLastCenters
             
             # estimate cluster membership
             # gets 2D array of Gamma_i,j

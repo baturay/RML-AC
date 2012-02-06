@@ -8,7 +8,7 @@ class datum:
    values = []
    name = ""
    cl = ""
-class machine:
+class cData:
    def __init__(self):
       self.data = []
       self.means = []
