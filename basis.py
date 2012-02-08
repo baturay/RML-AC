@@ -2,8 +2,7 @@ import sys
 import numpy
 import scipy
 import random
-from numpy import *
-from scipy import *
+from EM import *
 class datum:
    values = []
    name = ""
@@ -14,11 +13,11 @@ class cData:
       self.means = []
       self.stddevs = []
       self.clusters = []
-   def addDatum(self, values):
+   def addDatum(self, values, index):
       new_datum = datum()
-      new_datum.name = values[-1]
-      new_datum.cl = values[-2]
-      new_datum.values = [float(x) for x in values[:-2]]
+      new_datum.index = index #Every data's id is its row number
+      new_datum.cl = values[0]
+      new_datum.values = [float(x) for x in values[1:]]
       self.data.append(new_datum)
    def mean(self):
       sum = 0
@@ -43,17 +42,12 @@ class cData:
       for i in self.data:
          for j in range(0,attCount):
             i.values[j]=(i.values[j]-self.means[j])/self.stddevs[j]
-   def parseData(self, filename):
+   def parseCsv(self,filename):
       with open(filename,"r") as fin:
          lines = fin.readlines()
-      for i in range(len(lines)):
-         parts = lines[i].rstrip().split(" ")
-         if parts[0] == "@data":
-            data_start = i+1
-            break
-      for i in range(data_start, len(lines)):
+      for i in range(1, len(lines)):
          values = lines[i].rstrip().split(",")
-         self.addDatum(array(values))
+         self.addDatum(array(values),i)
    def randomInit(self, numClusters = 10):
    #Modify it to pick far cluster centers?
       for x in range(numClusters):
@@ -64,12 +58,14 @@ if __name__ == "__main__":
    if len(sys.argv) != 2:
       print("Error - usage is " + sys.argv[0] + " <data_file>")
       sys.exit(1)
-   m = machine()
-   m.parseData(sys.argv[1])
+   m = cData()
+   m.parseCsv(sys.argv[1])
    m.zvalues()
    m.randomInit()
-   for i in m.data:
-      print  i.name + " " + str(i.values) + " " + i.cl
+   iteration = EM(m)
+   iteration.EM(3)
+   # for i in m.data:
+      # print  str(i.index) + " " + str(i.values) + " " + i.cl
          
          
          

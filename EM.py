@@ -13,7 +13,7 @@ from basis import *
 
 class EM:
     lInitialCenters = []  # [ centers as [values] ]
-    mData = machine()
+    mData = cData()
 
     # iteration information
     numSteps = 0
