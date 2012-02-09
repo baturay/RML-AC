@@ -1,22 +1,25 @@
 import sys
-import numpy
-import scipy
 import random
 from EM import *
+from NMI import *
 class datum:
    values = []
    name = ""
    cl = ""
 class cData:
-   def __init__(self):
+   def __init__(self,filename):
       self.data = []
       self.means = []
       self.stddevs = []
-      self.clusters = []
+      self.classes = []
+      self.cons = []
+      self.parseCsv(filename)
+      self.zvalues()
+      self.poscons = [(i,j) for i in range(len(self.data)) for j in range(len(self.data))]
    def addDatum(self, values, index):
       new_datum = datum()
       new_datum.index = index #Every data's id is its row number
-      new_datum.cl = values[0]
+      new_datum.cl = int(values[0])
       new_datum.values = [float(x) for x in values[1:]]
       self.data.append(new_datum)
    def mean(self):
@@ -27,6 +30,17 @@ class cData:
             sum+=i.values[j] 
          self.means.append(sum/len(self.data))
          sum = 0
+   def makeConst(self,numC):
+      constraints = []
+      for i in range(numC):
+         pair = self.poscons.pop(random.randint(0,len(self.poscons)-1))
+         link = 0
+         if(self.data[pair[0]].cl==self.data[pair[1]].cl):
+            link = 1
+         else:
+            link = -1 
+         pair += (link,)
+         self.cons.append(pair)
    def stddev(self):
       attCount = len(self.data[0].values)
       for j in range(0,attCount):
@@ -48,25 +62,25 @@ class cData:
       for i in range(1, len(lines)):
          values = lines[i].rstrip().split(",")
          self.addDatum(array(values),i)
-   def randomInit(self, numClusters = 10):
-   #Modify it to pick far cluster centers?
-      for x in range(numClusters):
-         index = random.randint(0,len(self.data)-1)
-         center = self.data.pop(index)
-         self.clusters.append(center)
 if __name__ == "__main__":
    if len(sys.argv) != 2:
       print("Error - usage is " + sys.argv[0] + " <data_file>")
       sys.exit(1)
-   m = cData()
-   m.parseCsv(sys.argv[1])
-   m.zvalues()
-   m.randomInit()
-   iteration = EM(m)
-   iteration.EM(3)
+   numClusters = 3
+   m = cData(sys.argv[1])
+   m.makeConst(10)
+   print m.cons
+   #iteration = EM(m)
+   #iteration.EM(numClusters)
    # for i in m.data:
       # print  str(i.index) + " " + str(i.values) + " " + i.cl
-         
+   A = matrix([ [ random.random() for i in range(numClusters) ] for j in range (len(m.data)) ])
+   Estimated = np.ravel(A.argmax(1).T)
+   Real = array([ i.cl-1 for i in m.data])
+   print nmi(Estimated,Real)
+
+
+   
          
          
          
