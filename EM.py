@@ -31,11 +31,12 @@ class EM:
         if len(self.lLastCenters) == 0:
             return False
         
-        threshold = 0.5
+        threshold = 0.00005
             
         diffs = [ sp_s.distance.euclidean(array(self.lLastCenters[i]),array(self.lCenters[i]))
                   for i in range(len(self.lCenters)) ]
         if max(diffs) < threshold:
+            print "CONVERGED!!"
             return True
 
     
@@ -102,7 +103,7 @@ class EM:
         lXi = [ self.mData.data[i].values for i in range(nData) ]
 
         iters = 0
-        while iters < iterBound :#and not (iters != 1 and self.convergence()):
+        while iters < iterBound and not (iters != 1 and self.convergence()):
             self.lLastCenters = self.lCenters[:]
             print "new iter, last centers are: "
             print self.lLastCenters
