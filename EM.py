@@ -64,21 +64,40 @@ class EM:
             g_EM = g_EM[0,0]
             
             if bPPC:
-                return g_EM * np.exp(2*ppc_lambda *
-                                     np.sum( array(  [ 1,2,3  ] ) ) )
-
+                g_PPC = np.exp(2*ppc_lambda *
+                               np.sum( array(  [ Cij[i][j] * G_old[j,l]
+                                                 for j in range(nData) if i != j ]
+                                               ) ) )
+                return g_PPC * g_EM
+            
             return g_EM
 
-        # |data| x |centers|
-        G = matrix([ [ g()
-                       for l in range(len(lCenters)) ]
-                     for i in range(nData) ])
+        def gammaConverge():
+            # compare new with old gammas
+            return True
 
         # normalize each row ( over l for each i )
-        rowsums = G.sum(axis=1)  # matrix  |row| x 1
-        G = [ [ (G[i,l] / rowsums[i,0])
-                for l in range(len(lCenters)) ]
-              for i in range(nData) ]
+        def normalize(G):
+            rowsums = G.sum(axis=1)  # matrix  |row| x 1
+            nG = [ [ (G[i,l] / rowsums[i,0])
+                     for l in range(len(lCenters)) ]
+                   for i in range(nData) ]
+            return nG
+
+        # |data| x |centers|
+        iterBound = 20
+        if not bPPC:
+            iterBound = 1
+        iters = 0
+        G_old = self.mGammas
+        while iters < iterBound || not gammaConverge():            
+            G = matrix([ [ g()
+                           for l in range(len(lCenters)) ]
+                         for i in range(nData) ])
+            
+            G = normalize(G)
+            G_old = G
+            iters += 1
 
         return matrix(G)
     
