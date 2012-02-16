@@ -14,16 +14,16 @@ class cData:
       self.classes = []
       self.cons = [] #constraints so far
       self.parseCsv(filename)
-      self.poscons = [(i,j) for i in range(len(self.data)) for j in range(len(self.data))] #possible constraints
+      self.poscons = [] #possible constraints
       self.zvalues()
-	  
+      
    def addDatum(self, values, index):
       new_datum = datum()
       new_datum.index = index #Every data's id is its row number
       new_datum.cl = int(values[0])
       new_datum.values = [float(x) for x in values[1:]]
       self.data.append(new_datum)
-	  
+      
    def mean(self):
       sum = 0
       attCount = len(self.data[0].values)
@@ -32,8 +32,8 @@ class cData:
             sum+=i.values[j] 
          self.means.append(sum/len(self.data))
          sum = 0
-		 
-   def makeCons(self,numC):
+         
+   def makeConst(self,numC):
       for i in range(numC):
          pair = self.poscons.pop(random.randint(0,len(self.poscons)-1))
          link = 0
@@ -43,7 +43,7 @@ class cData:
             link = -1 
          pair += (link,)
          self.cons.append(pair)
-		 
+         
    def stddev(self):
       attCount = len(self.data[0].values)
       for j in range(0,attCount):
@@ -65,20 +65,31 @@ class cData:
       for i in range(1, len(lines)):
          values = lines[i].rstrip().split(",")
          self.addDatum(array(values),i)
+   def parseConstraints(self,filename):
+     with open(filename,"r") as fin:
+        lines = fin.readlines()
+     for i in range(0, len(lines)):
+        values = lines[i].rstrip().split(",")
+        self.poscons.append(array(values))
 if __name__ == "__main__":
-   if len(sys.argv) != 2:
+   if len(sys.argv) > 3:
       print("Error - usage is " + sys.argv[0] + " <data_file>")
       sys.exit(1)
-   numClusters = 3
+      
+   numClusters = 6
    m = cData(sys.argv[1])
-   for i in range(1000):
-      m.makeCons(10)
-      print m.cons
-      M= EM(m)
-      M.EM(numClusters)
-      Estimated = np.ravel(M.mGammas.argmax(1).T)
-      Real = array([ i.cl for i in m.data])
-      print nmi(Estimated,Real)
+   if len(sys.argv) == 2:
+      m.poscons = [(i,j) for i in range(len(m.data)) for j in range(len(m.data))]
+   else:
+      m.parseConstraints(sys.argv[2])
+      
+   m.makeConst(10)
+   print m.cons
+   iteration = EM(m)
+   iteration.EM(numClusters)
+   Estimated = np.ravel(iteration.mGammas.argmax(1).T)
+   Real = array([ i.cl-1 for i in m.data])
+   print nmi(Estimated,Real)
 
 
    
