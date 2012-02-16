@@ -34,6 +34,7 @@ class cData:
          sum = 0
          
    def makeConst(self,numC):
+      cons = []
       for i in range(numC):
          pair = self.poscons.pop(random.randint(0,len(self.poscons)-1))
          link = 0
@@ -43,7 +44,8 @@ class cData:
             link = -1 
          pair += (link,)
          self.cons.append(pair)
-         
+         cons.append(pair)
+      return cons
    def stddev(self):
       attCount = len(self.data[0].values)
       for j in range(0,attCount):
@@ -82,18 +84,13 @@ if __name__ == "__main__":
       m.poscons = [(i,j) for i in range(len(m.data)) for j in range(len(m.data))]
    else:
       m.parseConstraints(sys.argv[2])
-      
-   m.makeConst(10)
-   print m.cons
    iteration = EM(m)
-   iteration.EM(numClusters)
-   Estimated = np.ravel(iteration.mGammas.argmax(1).T)
-   Real = array([ i.cl-1 for i in m.data])
-   print nmi(Estimated,Real)
-
-
-   
-         
-         
-         
-         
+   for i in range(100): 
+       cons=m.makeConst(10)
+       for i in cons:
+           iteration.mCij[i[0]][i[1]] = i[2]
+           iteration.mCij[i[1]][i[0]] = i[2]
+       iteration.EM(numClusters)
+       Estimated = np.ravel(iteration.mGammas.argmax(1).T)
+       Real = array([ i.cl-1 for i in m.data])
+       print nmi(Estimated,Real)
