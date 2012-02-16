@@ -1,0 +1,13 @@
+n [4, 5, 23]
+
+
+* In each dimension, get info from user on what values are interesting
+  in that dimension and 'probabilistically discretize' by creating a
+  set of gaussians over that variable to fit the data.
+
+* In any dimension, ask user to group responses, ie in MS data, should
+  0,1 relapses be treated the same, then 2,3,4,5 then 6 + or something
+  like that.
+
+* Show some examples within a cluster and let the user tell us if any
+  points don't belong.
