@@ -23,9 +23,16 @@ class EM:
         self.lCenters = [] # [ centers as [values] ]
 
         self.bPPC = True # use PPC
-        self.mCij = []
 
-        self.mGammas = [] # matrix prob of instance i in cluster j
+        # init Cij to 1's
+        self.mCij =  [ [ 0 for i in range(len(_mData.data)) ]
+                       for j in range(len(_mData.data)) ]
+
+        # matrix prob of instance i in cluster j
+        self.mGammas = []
+
+        self.bVerbose = False
+        
 
     # returns true if we have reached convergence criteria
     def convergence(self):
@@ -48,14 +55,16 @@ class EM:
     # the P_l and the Sigma_l
     def clusterMembership(self, nData, nDataDim, lCenters, lPl, lSig, bPPC):
         coef = 1/(double(2*np.pi)**(nDataDim/double(2)))
-        print "lsig: " , lSig[0].shape
+        if self.bVerbose:
+            print "lsig: " , lSig[0].shape
         sigCoefs = [ 1/np.sqrt(np.linalg.det(sig)) for sig in lSig ]
 
-        print "lpl: " , lPl
+        if self.bVerbose:
+            print "lpl: " , lPl
 
         ppc_lambda = 2
         # compute single gamma value
-        def g():
+        def g(bPPC):
             # gamma value for standard EM
             A = lPl[l] * coef * sigCoefs[l]
             B = matrix(array(self.mData.data[i].values) - array(lCenters[l]))
@@ -82,7 +91,7 @@ class EM:
             nG = [ [ (G[i,l] / rowsums[i,0])
                      for l in range(len(lCenters)) ]
                    for i in range(nData) ]
-            return nG
+            return matrix(nG)
 
         # |data| x |centers|
         iterBound = 20
@@ -90,13 +99,16 @@ class EM:
             iterBound = 1
         iters = 0
         G_old = self.mGammas
-        while iters < iterBound or not gammaConverge():            
-            G = matrix([ [ g()
+        print "ppc converge...",
+        while iters < iterBound or not gammaConverge():
+            print iters, ",",
+            G = matrix([ [ g(bPPC) if iters > 0 else g(False)
                            for l in range(len(lCenters)) ]
-                         for i in range(nData) ])
+                         for i in range(nData) ] )
             
             G = normalize(G)
-            G_old = G
+            G_old = G.copy()
+
             iters += 1
 
         return matrix(G)
@@ -108,9 +120,11 @@ class EM:
         if self.lInitialCenters != []:
             if len(self.lInitialCenters) > numCenters:
                 self.lInitialCenters = self.lInitialCenters[:numCenters]
-                print "NOTE: given list of initial centers is too long, truncating"
+                if self.bVerbose:
+                    print "NOTE: given list of initial centers is too long, truncating"
             elif len(self.lInitialCenters) < numCenters:
-                print "ERROR: provided too few initial centers"
+                if self.bVerbose:
+                    print "ERROR: provided too few initial centers"
                 sys.exit(1)
         else:  # pick centers from data
             self.lInitialCenters = random.sample(self.mData.data, numCenters)
@@ -126,9 +140,12 @@ class EM:
 
         iters = 0
         while iters < iterBound and not (iters != 1 and self.convergence()):
+            if self.bVerbose:
+                print "aGamma convergence: ", iters
             self.lLastCenters = self.lCenters[:]
-            print "new iter, last centers are: "
-            print self.lLastCenters
+            if self.bVerbose:
+                print "new iter, last centers are: "
+                print self.lLastCenters
             
             # estimate cluster membership
             # gets 2D array of Gamma_i,j
@@ -144,8 +161,9 @@ class EM:
                                                    for i in range(nData) ],
                                                  0 ) )
                               for l in range(len(self.lCenters)) ]
-            print "new centers: "
-            print self.lCenters
+            if self.bVerbose:
+                print "new centers: "
+                print self.lCenters
             
             aXMuDiff = [ [ matrix(array(lXi[i]) - array(self.lCenters[l]))
                            for i in range(nData) ]
