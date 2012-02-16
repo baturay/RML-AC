@@ -90,7 +90,7 @@ class EM:
             iterBound = 1
         iters = 0
         G_old = self.mGammas
-        while iters < iterBound || not gammaConverge():            
+        while iters < iterBound or not gammaConverge():            
             G = matrix([ [ g()
                            for l in range(len(lCenters)) ]
                          for i in range(nData) ])
