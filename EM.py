@@ -6,6 +6,7 @@ from numpy import array
 import scipy.spatial as sp_s
 #from basis import cData
 import random
+import sys
 
 # this module contains a class that performs EM
 # clustering.  The input data is in the 'machine' format
@@ -22,7 +23,7 @@ class EM:
         self.lLastCenters = []  # [ centers as [values] ]
         self.lCenters = [] # [ centers as [values] ]
 
-        self.bPPC = True # use PPC
+        self.bPPC = False # use PPC
 
         # init Cij to 1's
         self.mCij =  [ [ 0 for i in range(len(_mData.data)) ]
@@ -32,7 +33,16 @@ class EM:
         self.mGammas = []
 
         self.bVerbose = False
+
+        self.sErrInfo = ""
+        self.saved_handler = np.seterrcall(self)
+        self.save_err = np.seterr(all='log')
         
+    # error logging function for numpy
+    def write(self, msg):
+        sys.stderr.write("ERROR: %s\n" % msg)
+        sys.stderr.write("   { %s\n" % self.sErrInfo)
+
 
     # returns true if we have reached convergence criteria
     def convergence(self):
@@ -44,7 +54,7 @@ class EM:
         diffs = [ sp_s.distance.euclidean(array(self.lLastCenters[i]),array(self.lCenters[i]))
                   for i in range(len(self.lCenters)) ]
         if max(diffs) < threshold:
-            print "CONVERGED!!"
+            sys.stderr.write("CONVERGED!!\n")
             return True
 
     
@@ -69,10 +79,12 @@ class EM:
             A = lPl[l] * coef * sigCoefs[l]
             B = matrix(array(self.mData.data[i].values) - array(lCenters[l]))
             C = matrix(lSig[l]).I
+            self.sErrInfo = "A: %f,  B: %s,  C: %s,  D: %f" % (A, B, C, -0.5 * B * C * B.T)
             g_EM =  A * np.exp(-0.5 * B * C * B.T )
             g_EM = g_EM[0,0]
             
             if bPPC:
+                self.sErrInfo = "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII" + self.sErrInfo
                 g_PPC = np.exp(2*ppc_lambda *
                                np.sum( array(  [ self.mCij[i][j] * G_old[j,l]
                                                  for j in range(nData) if i != j ]
@@ -99,9 +111,12 @@ class EM:
             iterBound = 1
         iters = 0
         G_old = self.mGammas
-        print "ppc converge...",
-        while iters < iterBound or not gammaConverge():
-            print iters, ",",
+
+        if self.bVerbose:
+            print "ppc converge...",
+        while iters < iterBound and not (iters != 0 and gammaConverge()):
+            if self.bVerbose:
+                print iters, ",",
             G = matrix([ [ g(bPPC) if iters > 0 else g(False)
                            for l in range(len(lCenters)) ]
                          for i in range(nData) ] )
@@ -121,10 +136,10 @@ class EM:
             if len(self.lInitialCenters) > numCenters:
                 self.lInitialCenters = self.lInitialCenters[:numCenters]
                 if self.bVerbose:
-                    print "NOTE: given list of initial centers is too long, truncating"
+                    sys.stderr.write("NOTE: given list of initial centers is too long, truncating\n")
             elif len(self.lInitialCenters) < numCenters:
                 if self.bVerbose:
-                    print "ERROR: provided too few initial centers"
+                    sys.stderr.write("ERROR: provided too few initial centers\n")
                 sys.exit(1)
         else:  # pick centers from data
             self.lInitialCenters = random.sample(self.mData.data, numCenters)
@@ -139,7 +154,7 @@ class EM:
         lXi = [ self.mData.data[i].values for i in range(nData) ]
 
         iters = 0
-        while iters < iterBound and not (iters != 1 and self.convergence()):
+        while iters < iterBound and not (iters != 0 and self.convergence()):
             if self.bVerbose:
                 print "aGamma convergence: ", iters
             self.lLastCenters = self.lCenters[:]

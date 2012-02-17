@@ -73,6 +73,8 @@ class cData:
      for i in range(0, len(lines)):
         values = lines[i].rstrip().split(",")
         self.poscons.append(array(values))
+
+
 if __name__ == "__main__":
    if len(sys.argv) > 3:
       print("Error - usage is " + sys.argv[0] + " <data_file>")
@@ -85,12 +87,14 @@ if __name__ == "__main__":
    else:
       m.parseConstraints(sys.argv[2])
    iteration = EM(m)
-   for i in range(100): 
-       cons=m.makeConst(10)
+   #iteration.bPPC = True
+   #for numCons in [0,1,25,50,100,200,500,1000,2000,5000,10000]:
+   for numCons in [0]:
+       cons=m.makeConst(numCons)
        for i in cons:
            iteration.mCij[i[0]][i[1]] = i[2]
            iteration.mCij[i[1]][i[0]] = i[2]
        iteration.EM(numClusters)
        Estimated = np.ravel(iteration.mGammas.argmax(1).T)
        Real = array([ i.cl-1 for i in m.data])
-       print nmi(Estimated,Real)
+       print numCons, ",", nmi(Estimated,Real)
