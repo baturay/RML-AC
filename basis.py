@@ -11,7 +11,7 @@ class cData:
       self.data = []
       self.means = []
       self.stddevs = []
-      self.classes = []
+      self.classes = dict()
       self.cons = [] #constraints so far
       self.parseCsv(filename)
       self.poscons = [] #possible constraints
@@ -20,7 +20,9 @@ class cData:
    def addDatum(self, values, index):
       new_datum = datum()
       new_datum.index = index #Every data's id is its row number
-      new_datum.cl = int(values[0])
+      new_datum.cl = values[0]
+      if(not (new_datum.cl in self.classes)):
+         self.classes[new_datum.cl] = len(self.classes)
       new_datum.values = [float(x) for x in values[1:]]
       self.data.append(new_datum)
       
@@ -80,21 +82,22 @@ if __name__ == "__main__":
       print("Error - usage is " + sys.argv[0] + " <data_file>")
       sys.exit(1)
       
-   numClusters = 6
+   numClusters = 3
    m = cData(sys.argv[1])
    if len(sys.argv) == 2:
       m.poscons = [(i,j) for i in range(len(m.data)) for j in range(len(m.data))]
    else:
       m.parseConstraints(sys.argv[2])
    iteration = EM(m)
+   print(len(m.classes))
    #iteration.bPPC = True
-   #for numCons in [0,1,25,50,100,200,500,1000,2000,5000,10000]:
-   for numCons in [0]:
+   for numCons in [0,1,25,50,100,200,500,1000,2000,5000,10000]:
+   #for numCons in [0]:
        cons=m.makeConst(numCons)
        for i in cons:
            iteration.mCij[i[0]][i[1]] = i[2]
            iteration.mCij[i[1]][i[0]] = i[2]
-       iteration.EM(numClusters)
+       iteration.EM(len(m.classes))
        Estimated = np.ravel(iteration.mGammas.argmax(1).T)
-       Real = array([ i.cl-1 for i in m.data])
+       Real = array([ m.classes[i.cl] for i in m.data])
        print numCons, ",", nmi(Estimated,Real)
