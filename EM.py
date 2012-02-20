@@ -37,11 +37,13 @@ class EM:
         self.sErrInfo = ""
         self.saved_handler = np.seterrcall(self)
         self.save_err = np.seterr(all='log')
-        
+        self.numErrs = 0
     # error logging function for numpy
     def write(self, msg):
-        sys.stderr.write("ERROR: %s\n" % msg)
-        sys.stderr.write("   { %s\n" % self.sErrInfo)
+        if self.numErrs <2:
+            sys.stderr.write("ERROR: %s\n" % msg)
+            sys.stderr.write("   { %s }\n" % self.sErrInfo)
+        self.numErrs += 1
 
 
     # returns true if we have reached convergence criteria
@@ -72,26 +74,31 @@ class EM:
         if self.bVerbose:
             print "lpl: " , lPl
 
-        ppc_lambda = 2
+        ppc_lambda = 1
         # compute single gamma value
         def g(bPPC):
+            
             # gamma value for standard EM
             A = lPl[l] * coef * sigCoefs[l]
+            #self.sErrInfo = "(abits - %f * %f * %f)" % (lPl[l], coef, sigCoefs[l])
             B = matrix(array(self.mData.data[i].values) - array(lCenters[l]))
             C = matrix(lSig[l]).I
-            self.sErrInfo = "A: %f,  B: %s,  C: %s,  D: %f" % (A, B, C, -0.5 * B * C * B.T)
-            g_EM =  A * np.exp(-0.5 * B * C * B.T )
+            #self.sErrInfo = self.sErrInfo + "  A: %f, D: %f" % (A, -0.5 * B * C * B.T)
+            #self.sErrInfo = self.sErrInfo + "um1"
+            #g_EM =  A * np.exp(-0.5 * B * C * B.T )
+            g_EM =  np.log(A) + B * C * B.T * -0.5
             g_EM = g_EM[0,0]
             
             if bPPC:
-                self.sErrInfo = "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII" + self.sErrInfo
-                g_PPC = np.exp(2*ppc_lambda *
-                               np.sum( array(  [ self.mCij[i][j] * G_old[j,l]
-                                                 for j in range(nData) if i != j ]
-                                               ) ) )
-                return g_PPC * g_EM
+                # just removed outer np.exp
+                g_PPC = 2*ppc_lambda * \
+                           np.sum( array(  [ self.mCij[i][j] * G_old[j,l]
+                                             for j in range(nData) if i != j ]
+                                           ) )
+                return np.exp(g_PPC + g_EM)
+                #return g_PPC * g_EM
             
-            return g_EM
+            return np.exp(g_EM)
 
         def gammaConverge():
             # compare new with old gammas
@@ -114,7 +121,7 @@ class EM:
 
         if self.bVerbose:
             print "ppc converge...",
-        while iters < iterBound and not (iters != 0 and gammaConverge()):
+        while iters < iterBound:# and not (iters != 0 and gammaConverge()):
             if self.bVerbose:
                 print iters, ",",
             G = matrix([ [ g(bPPC) if iters > 0 else g(False)

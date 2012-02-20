@@ -89,6 +89,7 @@ if __name__ == "__main__":
    else:
       m.parseConstraints(sys.argv[2])
    iteration = EM(m)
+   iteration.bPPC = True
    print(len(m.classes))
    #iteration.bPPC = True
    for numCons in [0,1,25,50,100,200,500,1000,2000,5000,10000]:
