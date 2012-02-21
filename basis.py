@@ -106,4 +106,4 @@ if __name__ == "__main__":
        Estimated = np.ravel(iteration.mGammas.argmax(1).T)
        
        Real = array([ m.classes[i.cl] for i in m.data])
-       print numCons, ",", nmi(Estimated,Real)
+       print numCons, ",", nmi(Estimated,Real), ",", Estimated
