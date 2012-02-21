@@ -73,7 +73,9 @@ class cData:
      with open(filename,"r") as fin:
         lines = fin.readlines()
      for i in range(0, len(lines)):
+        
         values = lines[i].rstrip().split(",")
+        print(values)
         self.poscons.append(array(values))
 
 
@@ -92,13 +94,16 @@ if __name__ == "__main__":
    iteration.bPPC = True
    print(len(m.classes))
    #iteration.bPPC = True
+   prevCons = 0
    for numCons in [0,1,25,50,100,200,500,1000,2000,5000,10000]:
    #for numCons in [0]:
-       cons=m.makeConst(numCons)
+       cons=m.makeConst(numCons-prevCons)
+       prevCons += numCons
        for i in cons:
            iteration.mCij[i[0]][i[1]] = i[2]
            iteration.mCij[i[1]][i[0]] = i[2]
        iteration.EM(len(m.classes))
        Estimated = np.ravel(iteration.mGammas.argmax(1).T)
+       
        Real = array([ m.classes[i.cl] for i in m.data])
        print numCons, ",", nmi(Estimated,Real)
