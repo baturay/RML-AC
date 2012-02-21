@@ -56,7 +56,7 @@ class EM:
         diffs = [ sp_s.distance.euclidean(array(self.lLastCenters[i]),array(self.lCenters[i]))
                   for i in range(len(self.lCenters)) ]
         if max(diffs) < threshold:
-            sys.stderr.write("CONVERGED!!\n")
+            sys.stderr.write("EM CONVERGED!!\n")
             return True
 
     
@@ -76,6 +76,7 @@ class EM:
 
         ppc_lambda = 1
         # compute single gamma value
+        #  (return log of that gamma value)
         def g(bPPC):
             
             # gamma value for standard EM
@@ -95,19 +96,30 @@ class EM:
                            np.sum( array(  [ self.mCij[i][j] * G_old[j,l]
                                              for j in range(nData) if i != j ]
                                            ) )
-                return np.exp(g_PPC + g_EM)
+                return g_PPC + g_EM
                 #return g_PPC * g_EM
             
-            return np.exp(g_EM)
+            return g_EM
 
         def gammaConverge():
             # compare new with old gammas
-            return True
+            threshold = np.exp(-20)
+            step = np.max(np.abs(G - G_old))
+            if step < threshold:
+                sys.stderr.write("gammaconverged: " + str(step) + "\n")
+            return step < threshold
 
         # normalize each row ( over l for each i )
+        # also apply exp
         def normalize(G):
+            #rowmins = G.min(axis=1)
+            rowmaxs = G.max(axis=1)
+            #rowranges = rowmaxs - rowmins
+            # 18 is half difference between underflow and overflow abs values
+            G = G - (rowmaxs - 700)
+            G = np.exp(G)
             rowsums = G.sum(axis=1)  # matrix  |row| x 1
-            nG = [ [ (G[i,l] / rowsums[i,0])
+            nG = [ [  (G[i,l] / rowsums[i,0])
                      for l in range(len(lCenters)) ]
                    for i in range(nData) ]
             return matrix(nG)
@@ -121,7 +133,9 @@ class EM:
 
         if self.bVerbose:
             print "ppc converge...",
-        while iters < iterBound:# and not (iters != 0 and gammaConverge()):
+        
+        bGammaConverged = False
+        while iters < iterBound and not (iters != 0 and bGammaConverged):
             if self.bVerbose:
                 print iters, ",",
             G = matrix([ [ g(bPPC) if iters > 0 else g(False)
@@ -129,9 +143,12 @@ class EM:
                          for i in range(nData) ] )
             
             G = normalize(G)
+            if iters > 0:
+                bGammaConverged = gammaConverge()
             G_old = G.copy()
 
             iters += 1
+        sys.stderr.write("ppcifinal " + str(iters) + "\n")
 
         return matrix(G)
     
