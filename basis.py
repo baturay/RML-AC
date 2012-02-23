@@ -15,7 +15,7 @@ class cData:
       self.cons = [] #constraints so far
       self.parseCsv(filename)
       self.poscons = [] #possible constraints
-      self.zvalues()
+      # self.zvalues()
       
    def addDatum(self, values, index):
       new_datum = datum()
@@ -72,10 +72,8 @@ class cData:
    def parseConstraints(self,filename):
      with open(filename,"r") as fin:
         lines = fin.readlines()
-     for i in range(0, len(lines)):
-        
+     for i in range(0, len(lines)):        
         values = lines[i].rstrip().split(",")
-        print(values)
         self.poscons.append(array(values))
 
 
@@ -84,12 +82,13 @@ if __name__ == "__main__":
       print("Error - usage is " + sys.argv[0] + " <data_file>")
       sys.exit(1)
       
-   numClusters = 3
+  
    m = cData(sys.argv[1])
    if len(sys.argv) == 2:
       m.poscons = [(i,j) for i in range(len(m.data)) for j in range(len(m.data))]
    else:
       m.parseConstraints(sys.argv[2])
+   
    iteration = EM(m)
    iteration.bPPC = True
    print(len(m.classes))
