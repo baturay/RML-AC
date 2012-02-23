@@ -15,6 +15,7 @@ class cData:
       self.cons = [] #constraints so far
       self.parseCsv(filename)
       self.poscons = [] #possible constraints
+      self.consfile = 0
       # self.zvalues()
       
    def addDatum(self, values, index):
@@ -38,13 +39,17 @@ class cData:
    def makeConst(self,numC):
       cons = []
       for i in range(numC):
-         pair = self.poscons.pop(random.randint(0,len(self.poscons)-1))
-         link = 0
-         if(self.data[pair[0]].cl==self.data[pair[1]].cl):
-            link = 1
+         if(len(self.poscons)==1):
+            pair = self.poscons.pop()
          else:
-            link = -1 
-         pair += (link,)
+            pair = self.poscons.pop(random.randint(0,len(self.poscons)-1))
+         if(not self.consfile):
+            link = 0
+            if(self.data[pair[0]].cl==self.data[pair[1]].cl):
+               link = 1
+            else:
+               link = -1 
+            pair += (link,)
          self.cons.append(pair)
          cons.append(pair)
       return cons
@@ -70,11 +75,12 @@ class cData:
          values = lines[i].rstrip().split(",")
          self.addDatum(array(values),i)
    def parseConstraints(self,filename):
+     self.consfile = 1
      with open(filename,"r") as fin:
         lines = fin.readlines()
      for i in range(0, len(lines)):        
         values = lines[i].rstrip().split(",")
-        self.poscons.append(array(values))
+        self.poscons.append(array([ int(v) for v in values] ))
 
 
 if __name__ == "__main__":
@@ -91,18 +97,18 @@ if __name__ == "__main__":
    
    iteration = EM(m)
    iteration.bPPC = True
-   print(len(m.classes))
-   #iteration.bPPC = True
    prevCons = 0
-   for numCons in [0,1,25,50,100,200,500,1000,2000,5000,10000]:
-   #for numCons in [0]:
+   for numCons in [0,25,50,100,200,500,1000,2000,5000,10000]:
+   #for numCons in range(0,len(m.poscons)):
        cons=m.makeConst(numCons-prevCons)
-       prevCons += numCons
+       prevCons = numCons
        for i in cons:
            iteration.mCij[i[0]][i[1]] = i[2]
            iteration.mCij[i[1]][i[0]] = i[2]
        iteration.EM(len(m.classes))
        Estimated = np.ravel(iteration.mGammas.argmax(1).T)
-       
        Real = array([ m.classes[i.cl] for i in m.data])
-       print numCons, ",", nmi(Estimated,Real), ",", Estimated
+       nmiresult = nmi(Estimated,Real)
+       print numCons, ",", nmiresult
+       if(nmiresult == 1):
+         break

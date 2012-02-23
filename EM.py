@@ -105,7 +105,7 @@ class EM:
             # compare new with old gammas
             threshold = np.exp(-20)
             step = np.max(np.abs(G - G_old))
-            if step < threshold:
+            if step < threshold and self.bVerbose:
                 sys.stderr.write("gammaconverged: " + str(step) + "\n")
             return step < threshold
 
@@ -148,7 +148,8 @@ class EM:
             G_old = G.copy()
 
             iters += 1
-        sys.stderr.write("ppcifinal " + str(iters) + "\n")
+        if(self.bVerbose):
+         sys.stderr.write("ppcifinal " + str(iters) + "\n")
 
         return matrix(G)
     
