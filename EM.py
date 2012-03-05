@@ -148,6 +148,7 @@ class EM:
             G_old = G.copy()
 
             iters += 1
+
         if self.bVerbose:
             sys.stderr.write("ppcifinal " + str(iters) + "\n")
 
