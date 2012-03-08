@@ -3,6 +3,7 @@ import scipy as sp
 from numpy import double
 from numpy import matrix
 from numpy import array
+from numpy import mat
 import scipy.spatial as sp_s
 #from basis import cData
 import random
@@ -38,11 +39,15 @@ class EM:
         self.saved_handler = np.seterrcall(self)
         self.save_err = np.seterr(all='log')
         self.numErrs = 0
+
+        self.bEMLikelihoodEachStep = False
+        self.dEMLikelihood = 0
+        
     # error logging function for numpy
     def write(self, msg):
         if self.numErrs <2:
             sys.stderr.write("ERROR: %s\n" % msg)
-            sys.stderr.write("   { %s }\n" % self.sErrInfo)
+            #sys.stderr.write("   { %s }\n" % self.sErrInfo)
         self.numErrs += 1
 
 
@@ -82,8 +87,8 @@ class EM:
             # gamma value for standard EM
             A = lPl[l] * coef * sigCoefs[l]
             #self.sErrInfo = "(abits - %f * %f * %f)" % (lPl[l], coef, sigCoefs[l])
-            B = matrix(array(self.mData.data[i].values) - array(lCenters[l]))
-            C = matrix(lSig[l]).I
+            B = mat(array(self.mData.data[i].values) - array(lCenters[l]))
+            C = mat(lSig[l]).I
             #self.sErrInfo = self.sErrInfo + "  A: %f, D: %f" % (A, -0.5 * B * C * B.T)
             #self.sErrInfo = self.sErrInfo + "um1"
             #g_EM =  A * np.exp(-0.5 * B * C * B.T )
@@ -122,7 +127,7 @@ class EM:
             nG = [ [  (G[i,l] / rowsums[i,0])
                      for l in range(len(lCenters)) ]
                    for i in range(nData) ]
-            return matrix(nG)
+            return mat(nG)
 
         # |data| x |centers|
         iterBound = 20
@@ -138,7 +143,7 @@ class EM:
         while iters < iterBound and not (iters != 0 and bGammaConverged):
             if self.bVerbose:
                 print iters, ",",
-            G = matrix([ [ g(bPPC) if iters > 0 else g(False)
+            G = mat([ [ g(bPPC) if iters > 0 else g(False)
                            for l in range(len(lCenters)) ]
                          for i in range(nData) ] )
             
@@ -152,14 +157,15 @@ class EM:
         if self.bVerbose:
             sys.stderr.write("ppcifinal " + str(iters) + "\n")
 
-        return matrix(G)
+        return mat(G)
     
     def EM(self, numCenters):
         iterBound = 20
         
         # get the initial centers
         if self.lInitialCenters != []:
-            print "need initicenters ", numCenters, " ", len(self.lInitialCenters)
+            if self.bVerbose:
+                print "need initicenters ", numCenters, " ", len(self.lInitialCenters)
             if len(self.lInitialCenters) > numCenters:
                 self.lInitialCenters = self.lInitialCenters[:numCenters]
                 if self.bVerbose:
@@ -210,7 +216,7 @@ class EM:
                 print "new centers: "
                 print self.lCenters
             
-            aXMuDiff = [ [ matrix(array(lXi[i]) - array(self.lCenters[l]))
+            aXMuDiff = [ [ mat(array(lXi[i]) - array(self.lCenters[l]))
                            for i in range(nData) ]
                          for l in range(len(self.lCenters)) ]
 
@@ -222,8 +228,29 @@ class EM:
                                           for i in range(nData) ] ) )
                      for l in range(len(self.lCenters)) ]
 
+            if self.bEMLikelihoodEachStep:
+                ll = EMLikelihood()
+                if bVerbose:
+                    print "likelihood at step " + str(iters) + ": " + str(ll)
+
             iters += 1
 
+        # calculate the EM Likelihood
+        self.EMLikelihood()
+
+    def EMLikelihood(self):
+        # formula is sum over n,l of gamma(i,l) * z(i,l) where
+        # z = 1 iff i is in cluster k, else 0
+        nData = len(self.mData.data)
+        LL = 0
+        membership = np.ravel(self.mGammas.argmax(1).T)
+        for i in range(nData):
+            for k in range(len(self.lCenters)):
+                if membership[i] == k:
+                    LL += self.mGammas[i,k]
+
+        self.dEMLikelihood = LL
+        return LL
 
 def printDims(v, textv):
     print "dims ", textv, np.size(v,0), np.size(v,1)
