@@ -148,8 +148,9 @@ class EM:
             G_old = G.copy()
 
             iters += 1
-        if(self.bVerbose):
-         sys.stderr.write("ppcifinal " + str(iters) + "\n")
+
+        if self.bVerbose:
+            sys.stderr.write("ppcifinal " + str(iters) + "\n")
 
         return matrix(G)
     
@@ -158,6 +159,7 @@ class EM:
         
         # get the initial centers
         if self.lInitialCenters != []:
+            print "need initicenters ", numCenters, " ", len(self.lInitialCenters)
             if len(self.lInitialCenters) > numCenters:
                 self.lInitialCenters = self.lInitialCenters[:numCenters]
                 if self.bVerbose:
@@ -167,8 +169,10 @@ class EM:
                     sys.stderr.write("ERROR: provided too few initial centers\n")
                 sys.exit(1)
         else:  # pick centers from data
+            print "pickcenters ", [ d.values for d in self.mData.data ]
             self.lInitialCenters = random.sample(self.mData.data, numCenters)
             self.lInitialCenters = [ c.values for c in self.lInitialCenters ]
+            print "initcenters ", self.lInitialCenters
 
         # initialization
         nDataDim = len(self.mData.data[0].values)
