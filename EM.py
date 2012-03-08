@@ -169,10 +169,11 @@ class EM:
                     sys.stderr.write("ERROR: provided too few initial centers\n")
                 sys.exit(1)
         else:  # pick centers from data
-            print "pickcenters ", [ d.values for d in self.mData.data ]
             self.lInitialCenters = random.sample(self.mData.data, numCenters)
             self.lInitialCenters = [ c.values for c in self.lInitialCenters ]
-            print "initcenters ", self.lInitialCenters
+            if self.bVerbose:
+                print "pickcenters ", [ d.values for d in self.mData.data ]
+                print "initcenters ", self.lInitialCenters
 
         # initialization
         nDataDim = len(self.mData.data[0].values)
