@@ -1,5 +1,6 @@
 import sys
 import random as R
+import pickle
 from EM import *
 from NMI import *
 class datum:
@@ -16,8 +17,27 @@ class cData:
       self.consfile = 0
       self.classes = array([ self.classlist[i.cl] for i in self.data])
       self.constype = 0
-      self.random = 0
+      self.consselect = 0
       self.startpoins = []
+   
+   def setType(self, constype, consselect):
+       if constype == "3":
+          m.constype = 3
+          if consselect == "random":
+             m.consselect = 0
+          elif consselect == "metric":
+             m.consselect = 1
+          else:
+             parseConstraints(consselect)
+       elif constype == "2":
+          m.constype = 2
+          if consselect == "random" or consselect == "metric":
+             m.poscons = [(i,j) for i in range(len(m.data)) for j in range(len(m.data))]
+          else:
+             m.parseConstraints(consselect) 
+       else:
+          m.constype = 1
+       
    def addDatum(self, values, index):
       new_datum = datum()
       new_datum.index = index #Every data's id is its row number
@@ -67,31 +87,32 @@ class cData:
         values = lines[i].rstrip().split(",")
         self.poscons.append(array([ int(v) for v in values] ))
         
-   def tripCons(self,gammadiffs,k):
+   def tripCons(self,mGammas,k):
+      gammadiffs = m.findDiffs(mGammas)
       constraints = []
       link = 0
      
       for i in range(k):
-         if(self.random):
+         if(not self.consselect):
             cons = choice(gammadiffs)
             gammadiffs.remove(cons)
          else:
             cons = gammadiffs.pop(0)
-         class1 = filter(lambda x: x[1] == cons[1],gammadiffs)
-         class2 = filter(lambda x: x[1] == cons[2],gammadiffs)
+         class1 = sorted(filter(lambda x: x[1] == cons[1],gammadiffs),key=lambda y: y[3])
+         class2 = sorted(filter(lambda x: x[1] == cons[2],gammadiffs),key=lambda y: y[3])
          class1 = class1[int(np.floor(0.8*len(class1))):]
          class2 = class2[int(np.floor(0.8*len(class2))):]
 
-         if len(class1)>0 and (m.data[cons[3]].cl == str(m.data[class1[-1][3]].cl)):
+         if len(class1)>0 and (m.data[cons[4]].cl == str(m.data[class1[-1][4]].cl)):
             link = 1
-         elif len(class2)>0 and (m.data[cons[3]].cl == str(m.data[class2[-1][3]].cl)):
+         elif len(class2)>0 and (m.data[cons[4]].cl == str(m.data[class2[-1][4]].cl)):
             link = -1
        
          if(link != 0):
             for i in class1:
-               constraints.append((cons[3],i[3],link))
+               constraints.append((cons[4],i[4],link))
             for i in class2:
-               constraints.append((cons[3],i[3],-1*link))
+               constraints.append((cons[4],i[4],-1*link))
       return constraints
       
    def findDiffs(self,gammas):
@@ -107,7 +128,7 @@ class cData:
                secondindex = j
                secondprob = gammas[i][j]
          metric = (firstprob-secondprob)/(firstprob+secondprob)
-         gammadiffs.append([metric,firstindex,secondindex,i])
+         gammadiffs.append([metric,firstindex,secondindex,firstprob,i])
      gammadiffs = sorted(gammadiffs,key=lambda x:x[0])
      return gammadiffs
      
@@ -121,6 +142,7 @@ class cData:
          if maxNMI < nmi:
             maxNMI = nmi
             maxEM = iteration
+      print maxNMI
       return maxEM
       
    def evaluateEM(self,em):
@@ -128,60 +150,47 @@ class cData:
       Estimated = np.ravel(em.mGammas.argmax(1).T)
       return nmi(Estimated,self.classes)
       
-   def emInitialPoints(self,file):
-      emstart = EM(self)
-      with open(filename,"r") as fin:
-         lines = fin.readlines()
-      for i in range(1, len(lines)):
-         values = lines[i].rstrip().split(",")
-         self.startpoints.append(array([ float(v) for v in values] ))
-      return emstart
+   # def emInitialPoints(self,file):
+      # emstart = EM(self)
+      # with open(filename,"r") as fin:
+         # lines = fin.readlines()
+      # for i in range(1, len(lines)):
+         # values = lines[i].rstrip().split(",")
+         # self.startpoints.append(array([ float(v) for v in values] ))
+      # return emstart
+      
 if __name__ == "__main__":
    if len(sys.argv) != 4 and len(sys.argv) != 5:
       print("Error - usage is " + sys.argv[0] + " <data_file> <constrainttype> <constraintsource> <startingdatapoints>")
       sys.exit(1)   
    m = cData(sys.argv[1])
-   
-   if sys.argv[2] == "3":
-      m.constype = 3
-      if sys.argv[3] == "random":
-         m.random = 1
-         m.poscons = m.data[:]
-      elif sys.argv[3] == "metric":
-         m.poscons = m.data[:]
-      else:
-         parseConstraints(sys.argv[3])
-   elif sys.argv[2] == "2":
-      m.constype = 2
-      if sys.argv[3] == "random" or sys.argv[3] == "metric":
-         m.poscons = [(i,j) for i in range(len(m.data)) for j in range(len(m.data))]
-      else:
-         m.parseConstraints(sys.argv[3]) 
-   else:
-      m.constype = 1
-   
-   
+   m.setType(sys.argv[2],sys.argv[3])
    if len(sys.argv)>4:
-      iteration = m.emInitial(file)
-      iteration.lInitialCenters = m.startpoints.pop(0)      
+      EmAlg = EM(m)
+      f = open(sys.argv[4],"r")
+      centers = pickle.load(f)
+      EmAlg.lInitialCenters = centers
+      EmAlg.EM(len(m.classlist))
    else:
-      iteration = m.emRestarts(9)
-   iteration.bPPC = True
+      EmAlg = m.emRestarts(10)
+      f = open("centers.pickle","w")
+      l = EmAlg.lCenters
+      pickle.dump(l,f)
+   EmAlg.bPPC = True
    prevCons = 0
-
+   
    totalcons = 0
-   for numCons in range(5,len(m.data),5): 
-      gammadiffs = m.findDiffs(iteration.mGammas)
+   for numCons in range(1,len(m.data)/4,1):     
       #The boolean at the end of next line is True for random
       #False for metric constraints.
-      cons = m.tripCons(gammadiffs,numCons-prevCons)
+      cons = m.tripCons(EmAlg.mGammas,numCons-prevCons)
       prevCons = numCons
       totalcons += len(cons)
       for i in cons:
-        iteration.mCij[i[0]][i[1]] = i[2]
-        iteration.mCij[i[1]][i[0]] = i[2]
+        EmAlg.mCij[i[0]][i[1]] = i[2]
+        EmAlg.mCij[i[1]][i[0]] = i[2]
       
-      nmiresult = m.evaluateEM(iteration)
+      nmiresult = m.evaluateEM(EmAlg)
       print numCons, ",", nmiresult, ",", totalcons
       if(nmiresult == 1 or len(m.data)==numCons):
          break
