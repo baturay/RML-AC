@@ -1,5 +1,5 @@
 import sys
-import random
+import random as R
 from EM import *
 from NMI import *
 class datum:
@@ -37,8 +37,9 @@ class cData:
          return []
          
    def pairCons(self,numC):
+      cons = []
       for i in range(numC):
-         pair = random.choice(self.poscons)
+         pair = R.choice(self.poscons)
          self.poscons.remove(pair)
          if(not self.consfile):
             link = 0
@@ -123,7 +124,7 @@ class cData:
       return maxEM
       
    def evaluateEM(self,em):
-      em.EM(len(m.classlist))
+      em.EM(len(self.classlist))
       Estimated = np.ravel(em.mGammas.argmax(1).T)
       return nmi(Estimated,self.classes)
       
