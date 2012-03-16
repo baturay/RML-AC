@@ -26,12 +26,13 @@ class EM:
 
         self.bPPC = False # use PPC
 
-        # init Cij to 1's
+        # init Cij to 0's
         self.mCij =  [ [ 0 for i in range(len(_mData.data)) ]
                        for j in range(len(_mData.data)) ]
 
-        # matrix prob of instance i in cluster j
+        # matrix prob/log_likelihood of instance i in cluster j
         self.mGammas = []
+        self.mLikelihood_il = []
 
         self.bVerbose = False
 
@@ -47,7 +48,7 @@ class EM:
     def write(self, msg):
         if self.numErrs <2:
             sys.stderr.write("ERROR: %s\n" % msg)
-            #sys.stderr.write("   { %s }\n" % self.sErrInfo)
+            sys.stderr.write("   { %s }\n" % self.sErrInfo)
         self.numErrs += 1
 
 
@@ -82,28 +83,34 @@ class EM:
         ppc_lambda = 1
         # compute single gamma value
         #  (return log of that gamma value)
-        def g(bPPC):
+        def g(di, dj, bPPC):
+            i = int(di)
+            l = int(dj)
             
             # gamma value for standard EM
             A = lPl[l] * coef * sigCoefs[l]
             #self.sErrInfo = "(abits - %f * %f * %f)" % (lPl[l], coef, sigCoefs[l])
-            B = mat(array(self.mData.data[i].values) - array(lCenters[l]))
-            C = mat(lSig[l]).I
+            B = mat(self.mData.data[i].values) - mat(lCenters[l])
+            C = mat(lSig[l])
+            if C.min() == 0:
+                 cis = np.where(C == 0)
+                 C[cis] = np.exp(-745)
+            C = C.I
             #self.sErrInfo = self.sErrInfo + "  A: %f, D: %f" % (A, -0.5 * B * C * B.T)
             #self.sErrInfo = self.sErrInfo + "um1"
             #g_EM =  A * np.exp(-0.5 * B * C * B.T )
+            
             g_EM =  np.log(A) + B * C * B.T * -0.5
+            #self.sErrInfo += "um2"
             g_EM = g_EM[0,0]
             
             if bPPC:
-                # just removed outer np.exp
                 g_PPC = 2*ppc_lambda * \
                            np.sum( array(  [ self.mCij[i][j] * G_old[j,l]
                                              for j in range(nData) if i != j ]
                                            ) )
                 return g_PPC + g_EM
-                #return g_PPC * g_EM
-            
+            #self.sErrInfo += "um3"
             return g_EM
 
         def gammaConverge():
@@ -124,10 +131,13 @@ class EM:
             G = G - (rowmaxs - 700)
             G = np.exp(G)
             rowsums = G.sum(axis=1)  # matrix  |row| x 1
-            nG = [ [  (G[i,l] / rowsums[i,0])
-                     for l in range(len(lCenters)) ]
-                   for i in range(nData) ]
-            return mat(nG)
+            
+            nG = G / rowsums
+            if nG.min() == 0:
+                gis = np.where(nG == 0)
+                nG[gis] = np.exp(-745)
+
+            return nG
 
         # |data| x |centers|
         iterBound = 20
@@ -143,10 +153,13 @@ class EM:
         while iters < iterBound and not (iters != 0 and bGammaConverged):
             if self.bVerbose:
                 print iters, ",",
-            G = mat([ [ g(bPPC) if iters > 0 else g(False)
-                           for l in range(len(lCenters)) ]
-                         for i in range(nData) ] )
-            
+            #G = mat([ [ g(bPPC) if iters > 0 else g(False)
+            #               for l in range(len(lCenters)) ]
+            #             for i in range(nData) ] )
+            G = mat( np.fromfunction( np.vectorize(lambda i, j: g(i, j, bPPC) if iters > 0 else g(i, j, False)),
+                                      (nData, len(lCenters)) ) )
+
+            self.mLikelihood_il = G.copy()
             G = normalize(G)
             if iters > 0:
                 bGammaConverged = gammaConverge()
@@ -204,8 +217,11 @@ class EM:
             self.mGammas = self.clusterMembership(nData, nDataDim, self.lCenters, lPl, lSig, self.bPPC)
             
             # recalculate parameters
-            lNl = [ np.sum(self.mGammas[:,l]) for l in range(len(self.lCenters)) ]
+            lNl = array([ np.sum(self.mGammas[:,l]) for l in range(len(self.lCenters)) ])
+            lnli = np.where(lNl == 0)
+            lNl[lnli] = np.exp(-745)
             lPl = [ lNl[l] / nData for l in range(len(self.lCenters)) ]
+            # ****** lcenters as matrix?
             self.lCenters = [ np.multiply(1/lNl[l],
                                           reduce(lambda x,y: x + y,
                                                  [ np.multiply(self.mGammas[i,l], lXi[i])
@@ -220,6 +236,7 @@ class EM:
                            for i in range(nData) ]
                          for l in range(len(self.lCenters)) ]
 
+            # ***** OPT... each elem should be a matrix
             lSig = [ np.multiply(1/lNl[l],
                                  reduce(lambda x,y: x+ y,
                                         [ np.multiply(self.mGammas[i,l],
