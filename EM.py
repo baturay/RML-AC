@@ -95,7 +95,12 @@ class EM:
             if C.min() == 0:
                  cis = np.where(C == 0)
                  C[cis] = np.exp(-745)
-            C = C.I
+
+            try:
+                C = C.I
+            except:
+                print "Singular Matrix C, moving on"
+                
             #self.sErrInfo = self.sErrInfo + "  A: %f, D: %f" % (A, -0.5 * B * C * B.T)
             #self.sErrInfo = self.sErrInfo + "um1"
             #g_EM =  A * np.exp(-0.5 * B * C * B.T )
@@ -153,11 +158,16 @@ class EM:
         while iters < iterBound and not (iters != 0 and bGammaConverged):
             if self.bVerbose:
                 print iters, ",",
-            #G = mat([ [ g(bPPC) if iters > 0 else g(False)
-            #               for l in range(len(lCenters)) ]
-            #             for i in range(nData) ] )
-            G = mat( np.fromfunction( np.vectorize(lambda i, j: g(i, j, bPPC) if iters > 0 else g(i, j, False)),
-                                      (nData, len(lCenters)) ) )
+
+            try:
+                G = mat([ [ g(i, l, bPPC) if iters > 0 else g(i,l,False)
+                            for l in range(len(lCenters)) ]
+                          for i in range(nData) ] )
+                #G = mat( np.fromfunction( np.vectorize(lambda i, j: g(i, j, bPPC) if iters > 0 else g(i, j, False)),
+                #                          (nData, len(lCenters)) ) )
+            except numpy.linalg.linalg.LinAlgError:
+                print "Singular matrix: moving on"
+                break
 
             self.mLikelihood_il = G.copy()
             G = normalize(G)
@@ -222,17 +232,24 @@ class EM:
             lNl[lnli] = np.exp(-745)
             lPl = [ lNl[l] / nData for l in range(len(self.lCenters)) ]
             # ****** lcenters as matrix?
+            #self.lCenters = [ np.multiply(1/lNl[l],
+            #                              reduce(lambda x,y: x + y,
+            #                                     [ np.multiply(self.mGammas[i,l], lXi[i])
+            #                                       for i in range(nData) ],
+            #                                     0 ) )
+            #                  for l in range(len(self.lCenters)) ]
             self.lCenters = [ np.multiply(1/lNl[l],
                                           reduce(lambda x,y: x + y,
                                                  [ np.multiply(self.mGammas[i,l], lXi[i])
                                                    for i in range(nData) ],
                                                  0 ) )
                               for l in range(len(self.lCenters)) ]
+
             if self.bVerbose:
                 print "new centers: "
                 print self.lCenters
             
-            aXMuDiff = [ [ mat(array(lXi[i]) - array(self.lCenters[l]))
+            aXMuDiff = [ [ mat(lXi[i]) - mat(self.lCenters[l])
                            for i in range(nData) ]
                          for l in range(len(self.lCenters)) ]
 
@@ -244,6 +261,15 @@ class EM:
                                                       aXMuDiff[l][i]) 
                                           for i in range(nData) ] ) )
                      for l in range(len(self.lCenters)) ]
+            #lSig = [ np.multiply(1/lNl[l],
+            #                     np.add.reduce(
+            #                       np.fromfunction( np.vectorize(
+            #                         lambda i:
+            #                           np.multiply(self.mGammas[int(i),l],
+            #                                          aXMuDiff[l][int(i)].T *
+            #                                          aXMuDiff[l][int(i)]) ),
+            #                         (nData,) ) ))
+            #                     for l in range(len(self.lCenters)) ]
 
             if self.bEMLikelihoodEachStep:
                 ll = EMLikelihood()
@@ -264,7 +290,7 @@ class EM:
         for i in range(nData):
             for k in range(len(self.lCenters)):
                 if membership[i] == k:
-                    LL += self.mGammas[i,k]
+                    LL += self.mLikelihood_il[i,k]
 
         self.dEMLikelihood = LL
         return LL
