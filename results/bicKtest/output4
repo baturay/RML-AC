@@ -1,0 +1,34 @@
+testing k = 2 ...
+12299.8442356
+-24586.8780143
+new best: -24586 at 2
+testing k = 3 ...
+16160.6152019
+-32302.0147185
+new best: -32302 at 3
+testing k = 4 ...
+17388.5375682
+-34751.4542226
+new best: -34751 at 4
+testing k = 5 ...
+18802.0162887
+-37572.0064351
+new best: -37572 at 5
+testing k = 6 ...
+19606.0973739
+-39173.7633771
+new best: -39173 at 6
+testing k = 7 ...
+20363.3978908
+-40681.9591824
+new best: -40681 at 7
+testing k = 8 ...
+nan
+nan
+testing k = 9 ...
+nan
+nan
+testing k = 10 ...
+nan
+nan
+best k 7:
