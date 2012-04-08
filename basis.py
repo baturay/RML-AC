@@ -4,10 +4,11 @@ import pickle
 from EM import *
 from NMI import *
 class datum:
-   def __init__(self):
-		self.values = []
-		self.name = ""
-		self.cl = ""
+   def __init__(self, values=[]):
+      self.values = values
+      self.name = ""
+      self.cl = ""
+      
 class emcluster:
    def __init__(self):
       self.center = []
@@ -26,8 +27,8 @@ class cData:
       self.classes = array([ self.classlist[i.cl] for i in self.data])
       self.constype = 0
       self.consselect = 0
-      self.startpoins = []
-   
+      self.clusters = []
+      
    def setType(self, constype, consselect):
        if constype == "3":
           m.constype = 3
@@ -138,49 +139,74 @@ class cData:
      gammadiffs = sorted(gammadiffs,key=lambda x:x[0])
      return gammadiffs
      
-   def findDistances(self,sources,cluster):
-      distances = []   
-      for i in cluster:
-         distance = 0
-         point = self.data[i[0]]
-         for s in sources:
+   def findMin(self,sources,cluster):
+      distances = []
+      for point in cluster.points:
+         mindist = inf
+         for source in sources:
+         #Finds the minimum distance of a point to source points.
+            s = source.values
+            distance = 0
             for index,value in enumerate(point.values):
                distance += (value - s[index])**2
-         distances.append([i,distance])
-  
+            #Just distance calculation.
+            if distance < mindist:
+               mindist = distance
+         distances.append([point,mindist])
+      #The minimum distance of every point in the cluster
+      #to the given source points.
       return distances    
-      
-   def repPoints(self,EM):
+   def createClusters(self,EM):
       maxindices = np.ravel(EM.mLikelihood_il.argmax(1).T)
-      ivpairs = []
-      for i,value in enumerate(maxindices):
-         ivpairs.append([i,value])
+      #Finds the indices of maximum likelihoods.
+      newdatums = []
+      for i,cl in enumerate(maxindices):
+         newdatum = datum(self.data[i].values)
+         newdatum.cl = cl
+         newdatum.name = i
+         newdatums.append(newdatum)
+      #Points turned into datums with Em's guess as their class.
       clusters = []
       for i,center in enumerate(EM.lCenters):
          c = emcluster()
-         c.points = filter(lambda x: x[1]==i,ivpairs)
-         c.center = center.tolist()
-         clusters.append(c)
-		 
-      for cl in clusters:
-         cdist = sorted(self.findDistances([cl.center],cl.points),key = lambda x : x[1])
-         cl.center = self.data[cdist[0][0][0]].values
+         c.points = filter(lambda x: x.cl==i,newdatums)  
+         c.index = i
+         #Clusters are formed.
+         c.center = datum(center.tolist())
+         #Non-point center.
+         self.clusters.append(c)
+   def repPoints(self,EM):     
+      print "Classes of the midpoints of clusters: "
+      for cl in self.clusters:
+         cdist = sorted(self.findMin([cl.center],cl),key = lambda x : x[1])
+         #Compares every point to the calculated center.
+         cl.center = cdist[0][0]
+         #Finds the closest real point and assigns it.
          cl.points.remove(cdist[0][0])        
-         cl.outerpoints.append(self.data[cdist[-1][0][0]].values)
+         #Removes it from the remaining points.
+         cl.outerpoints.append(cdist[-1][0])
+         #The largest distance from the center is the first outerpoint.
          cl.points.remove(cdist[-1][0])
-         
-         for i in range(3):
-            odist = sorted(self.findDistances(cl.outerpoints,cl.points),key = lambda x : x[1])
-            cl.outerpoints.append(self.data[odist[-1][0][0]].values)
+         for i in range(5):
+            #Other outerpoints are found by finding the maxmin of a point.
+            odist = sorted(self.findMin(cl.outerpoints,cl),key = lambda x : x[1])                     
+            cl.outerpoints.append(odist[-1][0])
             cl.points.remove(odist[-1][0])
+         
          for o in cl.outerpoints:
-            midpoint = []
-            for index,value in enumerate(o):
-               midpoint.append((value+cl.center[index])/2)
-            mdist = sorted(self.findDistances([midpoint],cl.points),key = lambda x : x[1])
-            cl.midpoints.append(midpoint)
-         print cl.midpoints
-            # mdist = sorted(self.findDistances([i],cl.points),key = lambda x : x[1])
+            midvalues = []
+            for index,value in enumerate(o.values):
+               midvalues.append((value+cl.center.values[index])/2)
+               #A point equidistant to the center and an outerpoint.
+            npmidpoint = datum()
+            npmidpoint.values = midvalues
+            #An imaginary midpoint is found.
+            mdist = sorted(self.findMin([npmidpoint],cl),key = lambda x : x[1])
+            #The real point closest to the imaginary midpoint is found and added.
+            cl.midpoints.append(mdist[0][0])
+            cl.points.remove(mdist[0][0])
+            
+         print [i.cl for i in cl.midpoints]
             
          
    def emRestarts(self,k):
@@ -217,13 +243,18 @@ class cData:
          f = open("centers.pickle","w")
          l = EmAlg.lCenters
          pickle.dump(l,f)
-      self.repPoints(EmAlg)
       return EmAlg
       
 if __name__ == "__main__":
    m = cData(sys.argv[1])
+   #Takes in the file and parses into datum's.
    m.setType("3","metric")
+   #Uses triple constraints and the metric to choose.
    EmAlg = m.parseCommandLine(sys.argv) 
+   #Starting points from the pickle or not.
+   m.createClusters(EmAlg)
+   m.repPoints(EmAlg)
+   
    EmAlg.bPPC = True
    
    prevCons = 0
