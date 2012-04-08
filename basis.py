@@ -27,7 +27,7 @@ class cData:
       self.classes = array([ self.classlist[i.cl] for i in self.data])
       self.constype = 0
       self.consselect = 0
-      self.clusters = []
+      self.emclusters = []
       
    def setType(self, constype, consselect):
        if constype == "3":
@@ -174,10 +174,10 @@ class cData:
          #Clusters are formed.
          c.center = datum(center.tolist())
          #Non-point center.
-         self.clusters.append(c)
+         self.emclusters.append(c)
    def repPoints(self,EM):     
       print "Classes of the midpoints of clusters: "
-      for cl in self.clusters:
+      for cl in self.emclusters:
          cdist = sorted(self.findMin([cl.center],cl),key = lambda x : x[1])
          #Compares every point to the calculated center.
          cl.center = cdist[0][0]
