@@ -254,17 +254,22 @@ class cData:
       return maxEM
    def goodInitial (self,em):
       consistent = 0
+      #Consistent means all the midpoints are same with the center.
       constraints = []
       while consistent != len(self.emclusters):
          consistent = 0
          for cl in self.emclusters:
             realpoints = [self.data[i.index] for i in cl.midpoints]
             realcenter = self.data[cl.center.index]
+            #Gets the real classes so we can do the simulation.
             rightclass = filter(lambda x: x.cl==realcenter.cl,realpoints)
             rightclass.append(realcenter)
+            #Filters the midpoints same with center and then adds center.
             wrongclass = filter(lambda x: x.cl!=realcenter.cl,realpoints)
+            #All the leftovers...
             if len(wrongclass) == 0:
                consistent += 1
+            #Cross constraints between right and wrong classes.
             for i in rightclass:
                for j in realpoints:
                   if j in wrongclass:
@@ -275,6 +280,7 @@ class cData:
               em.mCij[i[0]][i[1]] = i[2]
               em.mCij[i[1]][i[0]] = i[2]  
          print consistent
+         #If all classes are not right, restart.
          if consistent != len(self.emclusters):    
             em.lInitialCenters = []
             em.EM(len(self.emclusters))
@@ -320,6 +326,7 @@ if __name__ == "__main__":
    EmAlg.bPPC = True 
    #Finds the outerpoints and the midpoints and assigns them in emclusters.
    m.goodInitial(EmAlg)
+   #This makes the algorithm start with good initial points.
    
    
    prevCons = 0
