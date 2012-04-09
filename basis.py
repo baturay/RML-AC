@@ -3,6 +3,7 @@ import random as R
 import pickle
 from EM import *
 from NMI import *
+
 class datum:
    def __init__(self, values=[]):
       self.values = values
@@ -16,6 +17,7 @@ class emcluster:
       self.outerpoints = []
       self.midpoints = []
       self.points = []
+
 class cData:
    def __init__(self,filename):
       self.data = []
@@ -168,7 +170,11 @@ class cData:
          gammadiffs.append([metric,firstindex,secondindex,firstprob,i])
      gammadiffs = sorted(gammadiffs,key=lambda x:x[0])
      return gammadiffs
-     
+
+   # return a list of distances from each point in the cluster
+   # to the closest source
+   # **** consider using normalized data when calculating distances
+   #      or using a distance metric based on EM parameters
    def findMin(self,sources,cluster):
       distances = []
       for point in cluster.points:
@@ -187,6 +193,8 @@ class cData:
       #to the given source points.
       return distances    
       
+   # populates self.emclusters with a list of emcluster objects
+   # representing the clusters given by the _EM_ argument
    def createClusters(self,EM):
       maxindices = np.ravel(EM.mLikelihood_il.argmax(1).T)
       #Finds the indices of maximum likelihoods.
@@ -206,36 +214,40 @@ class cData:
          c.center = datum(center.tolist())
          #Non-point center.
          self.emclusters.append(c)
+         
+   # updates the emcluster objects in self.emclusters
+   # to include the correct center point and the mid-
+   # and outer points
    def repPoints(self,EM):     
       print "Classes of the midpoints of clusters: "
       for cl in self.emclusters:
-         cdist = sorted(self.findMin([cl.center],cl),key = lambda x : x[1])
          #Compares every point to the calculated center.
-         cl.center = cdist[0][0]
+         cdist = sorted(self.findMin([cl.center],cl),key = lambda x : x[1])
          #Finds the closest real point and assigns it.
-         cl.points.remove(cdist[0][0])        
+         cl.center = cdist[0][0]
          #Removes it from the remaining points.
-         cl.outerpoints.append(cdist[-1][0])
+         cl.points.remove(cdist[0][0])        
          #The largest distance from the center is the first outerpoint.
+         cl.outerpoints.append(cdist[-1][0])
          cl.points.remove(cdist[-1][0])
+         #Other outerpoints are found by finding the maxmin of a point.
          for i in range(5):
-            #Other outerpoints are found by finding the maxmin of a point.
-            odist = sorted(self.findMin(cl.outerpoints,cl),key = lambda x : x[1])                     
-            cl.outerpoints.append(odist[-1][0])
-            cl.points.remove(odist[-1][0])
+            odist = max(self.findMin(cl.outerpoints,cl),key = lambda x : x[1])                     
+            cl.outerpoints.append(odist[0])
+            cl.points.remove(odist[0])
          
          for o in cl.outerpoints:
             midvalues = []
+            # midvalues <- calculated mid point
             for index,value in enumerate(o.values):
-               midvalues.append((value+cl.center.values[index])/2)
-               #A point equidistant to the center and an outerpoint.
-            npmidpoint = datum()
-            npmidpoint.values = midvalues
-            #An imaginary midpoint is found.
-            mdist = sorted(self.findMin([npmidpoint],cl),key = lambda x : x[1])
+               midvalues.append((value+cl.center.values[index])/2)               
+            datMidvalues = datum()
+            datMidvalues.values = midvalues
+            
             #The real point closest to the imaginary midpoint is found and added.
-            cl.midpoints.append(mdist[0][0])
-            cl.points.remove(mdist[0][0])
+            mdist = min(self.findMin([npmidpoint],cl),key = lambda x : x[1])
+            cl.midpoints.append(mdist[0])
+            cl.points.remove(mdist[0])
             
          print [self.data[i.index].cl for i in cl.midpoints]
             
