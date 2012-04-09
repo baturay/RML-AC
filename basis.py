@@ -260,7 +260,8 @@ class cData:
       constraints = []
       while consistent != len(self.emclusters):
          consistent = 0
-         for cl in self.emclusters:
+         resetCenters = []
+         for ind,cl in enumerate(self.emclusters):
             realpoints = [self.data[i.index] for i in cl.midpoints]
             realcenter = self.data[cl.center.index]
             #Gets the real classes so we can do the simulation.
@@ -271,6 +272,7 @@ class cData:
             #All the leftovers...
             if len(wrongclass) == 0:
                consistent += 1
+               resetCenters.append(ind)
             #Cross constraints between right and wrong classes.
             for i in rightclass:
                for j in realpoints:
@@ -342,6 +344,7 @@ if __name__ == "__main__":
       for i in cons:
         EmAlg.mCij[i[0]][i[1]] = i[2]
         EmAlg.mCij[i[1]][i[0]] = i[2]    
+      EmAlg.EM(len(m.classlist))
       nmiresult = m.evaluateEM(EmAlg)
       print numCons, ",", nmiresult, ",", totalcons 
       if(nmiresult == 1 or len(m.data)==numCons):
