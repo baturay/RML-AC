@@ -245,7 +245,7 @@ class cData:
             datMidvalues.values = midvalues
             
             #The real point closest to the imaginary midpoint is found and added.
-            mdist = min(self.findMin([npmidpoint],cl),key = lambda x : x[1])
+            mdist = min(self.findMin([datMidvalues],cl),key = lambda x : x[1])
             cl.midpoints.append(mdist[0])
             cl.points.remove(mdist[0])
             
