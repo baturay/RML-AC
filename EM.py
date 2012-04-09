@@ -187,10 +187,11 @@ class cEM:
     # list _lIndices_ with a randomly chosen data point
     def resetSomeCenters(self, lCenters, lIndices):
         if self.lUsedCenterInds == []:
-            self.lUsedCenterInds = range(self.mData.data)
+            self.lUsedCenterInds = range(len(self.mData.data))
         
         for i in lIndices:
             icenteri = random.sample(range(len(self.lUsedCenterInds)), 1)
+            icenteri = icenteri[0]  # random.sample returns a list
             icenter = self.lUsedCenterInds.pop(icenteri)
             lCenters[i] = self.mData.data[icenter].values
 
@@ -314,10 +315,31 @@ def printDim(v, textv):
     print "dim ", textv, np.size(v,0)
 
 
+# returns a set of initial centers based on a clustering of
+# the centers of several initial clusterings
+# * D is the data (cData) object
+# * k is the number of classes (0 -> use #classes from D)
+def JLStartingPoint(D, k):
+    if k == 0:
+        k = len(D.classes)
+
+    M = cEM(D)
+    M.bPPC = False
+    llCenters = []
+    # get 20 different centers from running random-restarts of EM
+    for iRestart in range(20):
+        print "running EM ", iRestart, "..."
+        M.lInitialCenters = []
+        M.EM(k)
+        llCenters.append(M.lCenters)
+
+    
+
+
 
 if __name__ == "__main__":
     import basis
     D = basis.cData("data/winenorm3_pyre.txt")
-    M = EM(D)
+    M = cEM(D)
     M.EM(3)
     
