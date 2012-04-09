@@ -25,27 +25,27 @@ class cData:
       self.poscons = [] #possible constraints
       self.consfile = 0
       self.classes = array([ self.classlist[i.cl] for i in self.data])
-      self.constype = 0
-      self.consselect = 0
+      self.constype = 3
+      self.consselect = 1
       self.emclusters = []
       
    def setType(self, constype, consselect):
        if constype == "3":
-          m.constype = 3
+          self.constype = 3
           if consselect == "random":
-             m.consselect = 0
+             self.consselect = 0
           elif consselect == "metric":
-             m.consselect = 1
+             self.consselect = 1
           else:
              parseConstraints(consselect)
        elif constype == "2":
-          m.constype = 2
+          self.constype = 2
           if consselect == "random" or consselect == "metric":
-             m.poscons = [(i,j) for i in range(len(m.data)) for j in range(len(m.data))]
+             self.poscons = [(i,j) for i in range(len(self.data)) for j in range(len(self.data))]
           else:
-             m.parseConstraints(consselect) 
+             self.parseConstraints(consselect) 
        else:
-          m.constype = 1
+          self.constype = 1
        
    def addDatum(self, values, index):
       new_datum = datum()
@@ -97,7 +97,7 @@ class cData:
         self.poscons.append(array([ int(v) for v in values] ))
         
    def tripCons(self,mGammas,k):
-      gammadiffs = m.findDiffs(mGammas)
+      gammadiffs = self.findDiffs(mGammas)
       constraints = []
       link = 0   
       for i in range(k):
@@ -114,7 +114,14 @@ class cData:
             link = 1
          elif len(class2)>0 and (m.data[cons[4]].cl == str(m.data[class2[-1][4]].cl)):
             link = -1
-         print link
+         # class1 = self.emclusters[cons[1]].midpoints[:]
+         # class2 = self.emclusters[cons[2]].midpoints[:]
+         # class1.append(self.emclusters[cons[1]].center)
+         # class2.append(self.emclusters[cons[2]].center)
+         # if self.data[class1[-1].name].cl == str(self.data[cons[4]].cl):
+            # link = 2
+         # elif self.data[class2[-1].name].cl == str(self.data[cons[4]].cl):
+            # link = -2           
          if(link != 0):
             for i in class1:
                constraints.append((cons[4],i[4],link))
@@ -156,6 +163,7 @@ class cData:
       #The minimum distance of every point in the cluster
       #to the given source points.
       return distances    
+      
    def createClusters(self,EM):
       maxindices = np.ravel(EM.mLikelihood_il.argmax(1).T)
       #Finds the indices of maximum likelihoods.
@@ -163,10 +171,10 @@ class cData:
       for i,cl in enumerate(maxindices):
          newdatum = datum(self.data[i].values)
          newdatum.cl = cl
-         newdatum.name = i
+         newdatum.index = i
          newdatums.append(newdatum)
       #Points turned into datums with Em's guess as their class.
-      clusters = []
+      self.emclusters = []
       for i,center in enumerate(EM.lCenters):
          c = emcluster()
          c.points = filter(lambda x: x.cl==i,newdatums)  
@@ -206,7 +214,7 @@ class cData:
             cl.midpoints.append(mdist[0][0])
             cl.points.remove(mdist[0][0])
             
-         print [i.cl for i in cl.midpoints]
+         print [self.data[i.index].cl for i in cl.midpoints]
             
          
    def emRestarts(self,k):
@@ -221,7 +229,37 @@ class cData:
             maxEM = iteration
       print maxNMI
       return maxEM
-      
+   def goodInitial (self,em):
+      consistent = 0
+      constraints = []
+      while consistent != len(self.emclusters):
+         consistent = 0
+         for cl in self.emclusters:
+            realpoints = [self.data[i.index] for i in cl.midpoints]
+            realcenter = self.data[cl.center.index]
+            rightclass = filter(lambda x: x.cl==realcenter.cl,realpoints)
+            rightclass.append(realcenter)
+            wrongclass = filter(lambda x: x.cl!=realcenter.cl,realpoints)
+            if len(wrongclass) == 0:
+               consistent += 1
+            for i in rightclass:
+               for j in realpoints:
+                  if j in wrongclass:
+                    constraints.append([i.index,j.index,-1])
+                  elif j!= i:
+                     constraints.append([i.index,j.index,1])
+            for i in constraints:
+              em.mCij[i[0]][i[1]] = i[2]
+              em.mCij[i[1]][i[0]] = i[2]  
+         print consistent
+         if consistent != len(self.emclusters):    
+            em.lInitialCenters = []
+            em.EM(len(self.emclusters))
+            self.createClusters(em)
+            self.repPoints(em)
+         Estimated = np.ravel(em.mGammas.argmax(1).T)
+         print "nmi: ",nmi(Estimated,self.classes)
+         
    def evaluateEM(self,em):
       em.EM(len(self.classlist))
       Estimated = np.ravel(em.mGammas.argmax(1).T)
@@ -239,7 +277,7 @@ class cData:
          EmAlg.lInitialCenters = centers
          EmAlg.EM(len(self.classlist))
       else:
-         EmAlg = self.emRestarts(5)
+         EmAlg = self.emRestarts(1)
          f = open("centers.pickle","w")
          l = EmAlg.lCenters
          pickle.dump(l,f)
@@ -251,17 +289,21 @@ if __name__ == "__main__":
    m.setType("3","metric")
    #Uses triple constraints and the metric to choose.
    EmAlg = m.parseCommandLine(sys.argv) 
+   
    #Starting points from the pickle or not.
    m.createClusters(EmAlg)
+   #Creates clusters depending on what EM guessed.
    m.repPoints(EmAlg)
+   EmAlg.bPPC = True 
+   #Finds the outerpoints and the midpoints and assigns them in emclusters.
+   m.goodInitial(EmAlg)
    
-   EmAlg.bPPC = True
    
    prevCons = 0
    totalcons = 0
-   initial = EmAlg.lInitialCenters
    nmiResult = m.evaluateEM(EmAlg)
    print "Initial nmi: ",nmiResult
+   
    for numCons in range(1,len(m.data),1):     
       cons = m.tripCons(EmAlg.mGammas,numCons-prevCons)
       prevCons = numCons
