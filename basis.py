@@ -124,27 +124,27 @@ class cData:
             gammadiffs.remove(cons)
          else:
             cons = gammadiffs.pop(0)
-         class1 = sorted(filter(lambda x: x[1] == cons[1],gammadiffs),key=lambda y: y[3])
-         class2 = sorted(filter(lambda x: x[1] == cons[2],gammadiffs),key=lambda y: y[3])
-         class1 = class1[int(np.floor(0.8*len(class1))):]
-         class2 = class2[int(np.floor(0.8*len(class2))):]
-         if len(class1)>0 and (m.data[cons[4]].cl == str(m.data[class1[-1][4]].cl)):
-            link = 1
-         elif len(class2)>0 and (m.data[cons[4]].cl == str(m.data[class2[-1][4]].cl)):
-            link = -1
-         # class1 = self.emclusters[cons[1]].midpoints[:]
-         # class2 = self.emclusters[cons[2]].midpoints[:]
-         # class1.append(self.emclusters[cons[1]].center)
-         # class2.append(self.emclusters[cons[2]].center)
-         # if self.data[class1[-1].name].cl == str(self.data[cons[4]].cl):
-            # link = 2
-         # elif self.data[class2[-1].name].cl == str(self.data[cons[4]].cl):
-            # link = -2           
+         # class1 = sorted(filter(lambda x: x[1] == cons[1],gammadiffs),key=lambda y: y[3])
+         # class2 = sorted(filter(lambda x: x[1] == cons[2],gammadiffs),key=lambda y: y[3])
+         # class1 = class1[int(np.floor(0.8*len(class1))):]
+         # class2 = class2[int(np.floor(0.8*len(class2))):]
+         # if len(class1)>0 and (m.data[cons[4]].cl == str(m.data[class1[-1][4]].cl)):
+            # link = 1
+         # elif len(class2)>0 and (m.data[cons[4]].cl == str(m.data[class2[-1][4]].cl)):
+            # link = -1
+         class1 = self.emclusters[cons[1]].midpoints[:]
+         class2 = self.emclusters[cons[2]].midpoints[:]
+         class1.append(self.emclusters[cons[1]].center)
+         class2.append(self.emclusters[cons[2]].center)
+         if self.data[class1[-1].index].cl == str(self.data[cons[4]].cl):
+            link = 2
+         elif self.data[class2[-1].index].cl == str(self.data[cons[4]].cl):
+            link = -2           
          if(link != 0):
             for i in class1:
-               constraints.append((cons[4],i[4],link))
+               constraints.append((cons[4],i.index,link))
             for i in class2:
-               constraints.append((cons[4],i[4],-1*link))
+               constraints.append((cons[4],i.index,-1*link))
       return constraints
       
    # from an EM.mGammas matrix (normd likelihood of pt i in clust j)
@@ -242,10 +242,12 @@ class cData:
          
    def emRestarts(self,k):
       centers = []
-      maxEM = EM(self)
+      maxEM = cEM(self)
+      maxEM.EM(len(self.classlist))
       maxNMI = self.evaluateEM(maxEM)
       for i in range(k):
-         iteration = EM(self)
+         iteration = cEM(self)
+         iteration.EM(len(self.classlist))
          nmi = self.evaluateEM(iteration)
          if maxNMI < nmi:
             maxNMI = nmi
@@ -288,9 +290,8 @@ class cData:
             self.repPoints(em)
          Estimated = np.ravel(em.mGammas.argmax(1).T)
          print "nmi: ",nmi(Estimated,self.classes)
-         
+      return em   
    def evaluateEM(self,em):
-      em.EM(len(self.classlist))
       Estimated = np.ravel(em.mGammas.argmax(1).T)
       return nmi(Estimated,self.classes)
       
@@ -300,7 +301,7 @@ class cData:
          sys.exit(1)   
         
       if len(argv)>2:
-         EmAlg = EM(self)
+         EmAlg = cEM(self)
          f = open(argv[2],"r")
          centers = pickle.load(f)
          EmAlg.lInitialCenters = centers
@@ -325,7 +326,7 @@ if __name__ == "__main__":
    m.repPoints(EmAlg)
    EmAlg.bPPC = True 
    #Finds the outerpoints and the midpoints and assigns them in emclusters.
-   m.goodInitial(EmAlg)
+   EmAlg = m.goodInitial(EmAlg)
    #This makes the algorithm start with good initial points.
    
    
