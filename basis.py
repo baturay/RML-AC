@@ -25,10 +25,18 @@ class cData:
       self.poscons = [] #possible constraints
       self.consfile = 0
       self.classes = array([ self.classlist[i.cl] for i in self.data])
-      self.constype = 3
-      self.consselect = 1
       self.emclusters = []
+
+      # options for constraint generation (set these with setType)
+      self.constype = 3 # triplet or pair constraints (3 or 2)
+      self.consselect = 1 # 0 for random, 1 for using metric
+
       
+   # public use: sets options for choosing constraints
+   # * constype as string tells triplet ("3") or pair ("2")
+   # * consselect tells 'random' or 'metric' selection or a filename
+   # if random pairwise constraints, they are calculated
+   #  and stored in self.poscons
    def setType(self, constype, consselect):
        if constype == "3":
           self.constype = 3
@@ -47,6 +55,8 @@ class cData:
        else:
           self.constype = 1
        
+   # appends self.data with datum created with _values_
+   # and self.classlist with numeric class labels
    def addDatum(self, values, index):
       new_datum = datum()
       new_datum.index = index #Every data's id is its row number
@@ -57,6 +67,8 @@ class cData:
       new_datum.values = [float(x) for x in values[1:]]
       self.data.append(new_datum)
 
+   # return list of _numC_ triplet or pairwise constraint
+   # depending on self.constype
    def makeConst(self,numC):
       if self.constype == 2:
          return pairCons(numC)
@@ -65,6 +77,9 @@ class cData:
       else:
          return []
          
+   # return list of _numC_ pairwise constraints from self.poscons
+   # * list is also appended to self.cons
+   # * constraint format is (x,y,link as {-1,1})
    def pairCons(self,numC):
       cons = []
       for i in range(numC):
@@ -81,6 +96,7 @@ class cData:
          cons.append(pair)
       return cons
                  
+   # data loaded from _filename_ and written to self.data
    def parseCsv(self,filename):
       with open(filename,"r") as fin:
          lines = fin.readlines()
@@ -88,6 +104,8 @@ class cData:
          values = lines[i].rstrip().split(",")
          self.addDatum(array(values),i)
          
+   # store constraints from _filename_ to
+   # self.poscons
    def parseConstraints(self,filename):
      self.consfile = 1
      with open(filename,"r") as fin:
@@ -129,6 +147,11 @@ class cData:
                constraints.append((cons[4],i[4],-1*link))
       return constraints
       
+   # from an EM.mGammas matrix (normd likelihood of pt i in clust j)
+   # determine for each datum, most (CA) and second-most (CB) likely
+   # cluster assignment and evaluate metric of (CA-CB)/(CA+CB)
+   # return [ [metric,firstindex,secondindex,firstprob,i] ]
+   #   with entry for each datum, all sorted by metric
    def findDiffs(self,gammas):
      gammadiffs = []
      maxindices = np.ravel(gammas.argmax(1).T)

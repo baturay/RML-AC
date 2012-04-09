@@ -13,7 +13,7 @@ import sys
 # clustering.  The input data is in the 'machine' format
 # given in data.py
 
-class EM:
+class cEM:
     def __init__(self, _mData):
         self.mData = _mData
 
@@ -23,6 +23,7 @@ class EM:
         self.numSteps = 0
         self.lLastCenters = []  # [ centers as [values] ]
         self.lCenters = [] # [ centers as [values] ]
+        self.lUsedCenterInds = [] # indices of data already chosen as centers
 
         self.bPPC = False # use PPC
 
@@ -37,14 +38,14 @@ class EM:
         self.bVerbose = False
 
         self.sErrInfo = ""
-        self.saved_handler = np.seterrcall(self)
-        self.save_err = np.seterr(all='log')
+        #self.saved_handler = np.seterrcall(self)
+        #self.save_err = np.seterr(all='log')
         self.numErrs = 0
 
         self.bEMLikelihoodEachStep = False
         self.dEMLikelihood = 0
         
-    # error logging function for numpy
+    # error logging function for numpy (required name)
     def write(self, msg):
         if self.numErrs <2:
             sys.stderr.write("ERROR: %s\n" % msg)
@@ -99,7 +100,7 @@ class EM:
             try:
                 C = C.I
             except:
-                print "Singular Matrix C, moving on"
+                sys.stderr.write("Singular Matrix C, moving on\n")
                 
             #self.sErrInfo = self.sErrInfo + "  A: %f, D: %f" % (A, -0.5 * B * C * B.T)
             #self.sErrInfo = self.sErrInfo + "um1"
@@ -182,6 +183,18 @@ class EM:
 
         return mat(G)
     
+    # in the list of centers _lCenters_, swap out the items at indices in the
+    # list _lIndices_ with a randomly chosen data point
+    def resetSomeCenters(self, lCenters, lIndices):
+        if self.lUsedCenterInds == []:
+            self.lUsedCenterInds = range(self.mData.data)
+        
+        for i in lIndices:
+            icenteri = random.sample(range(len(self.lUsedCenterInds)), 1)
+            icenter = self.lUsedCenterInds.pop(icenteri)
+            lCenters[i] = self.mData.data[icenter].values
+
+    # run the EM algorithm looking for given number of clusters
     def EM(self, numCenters):
         iterBound = 20
         
@@ -198,10 +211,9 @@ class EM:
                     sys.stderr.write("ERROR: provided too few initial centers\n")
                 sys.exit(1)
         else:  # pick centers from data
-            self.lInitialCenters = random.sample(self.mData.data, numCenters)
-            self.lInitialCenters = [ c.values for c in self.lInitialCenters ]
+            self.lInitialCenters = range(numCenters)
+            self.resetSomeCenters(self.lInitialCenters, range(numCenters))
             if self.bVerbose:
-                print "pickcenters ", [ d.values for d in self.mData.data ]
                 print "initcenters ", self.lInitialCenters
 
         # initialization
