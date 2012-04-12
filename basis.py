@@ -33,6 +33,9 @@ class cData:
       self.constype = 3 # triplet or pair constraints (3 or 2)
       self.consselect = 1 # 0 for random, 1 for using metric
 
+      # keep track of A values selected for triplet constraints
+      self.AHistory = []
+
       
    # public use: sets options for choosing constraints
    # * constype as string tells triplet ("3") or pair ("2")
@@ -127,7 +130,10 @@ class cData:
             A = R.choice(gammadiffs)
             gammadiffs.remove(cons)
          else:
-            A = gammadiffs.pop(0)
+            A = -1
+            while A == -1 or A[4] in self.AHistory:
+               A = gammadiffs.pop(0)
+            self.AHistory.push(A[4])
          # class1 = sorted(filter(lambda x: x[1] == cons[1],gammadiffs),key=lambda y: y[3])
          # class2 = sorted(filter(lambda x: x[1] == cons[2],gammadiffs),key=lambda y: y[3])
          # class1 = class1[int(np.floor(0.8*len(class1))):]
