@@ -5,7 +5,7 @@ from numpy import matrix
 from numpy import array
 from numpy import mat
 import scipy.spatial as sp_s
-#from basis import cData
+from basis import cData
 import random
 import sys
 
@@ -38,8 +38,8 @@ class cEM:
         self.bVerbose = False
 
         self.sErrInfo = ""
-        #self.saved_handler = np.seterrcall(self)
-        #self.save_err = np.seterr(all='log')
+        self.saved_handler = np.seterrcall(self)
+        self.save_err = np.seterr(all='log')
         self.numErrs = 0
 
         self.bEMLikelihoodEachStep = False
@@ -48,8 +48,8 @@ class cEM:
     # error logging function for numpy (required name)
     def write(self, msg):
         if self.numErrs <2:
-            sys.stderr.write("ERROR: %s\n" % msg)
-            sys.stderr.write("   { %s }\n" % self.sErrInfo)
+            sys.stderr.write("ERROR: %s" % msg)
+            sys.stderr.write(" { %s }\n" % self.sErrInfo)
         self.numErrs += 1
 
 
@@ -296,7 +296,7 @@ class cEM:
 
     def EMLikelihood(self):
         # formula is sum over n,l of gamma(i,l) * z(i,l) where
-        # z = 1 iff i is in cluster k, else 0
+        # z = 1 if i is in cluster k, else 0
         nData = len(self.mData.data)
         LL = 0
         membership = np.ravel(self.mGammas.argmax(1).T)
@@ -333,8 +333,18 @@ def JLStartingPoint(D, k):
         M.EM(k)
         llCenters.append(M.lCenters)
 
-    
-
+    # **** horrible hack - assumes this file exists because
+    # it is not trivial to add a constructor that takes
+    # a different type of data so a filename is needed
+    D2 = cData("data/winenorm3_pyre.txt")
+    D2.data = []
+    print llCenters
+    for i, V in enumerate(llCenters):
+        D2.addDatum([0] + V, i)  # add 0 to beginning as class
+        
+    M2 = cEM(D2)
+    M2.EM(k)
+    return M2.lCenters    
 
 
 if __name__ == "__main__":

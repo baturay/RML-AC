@@ -116,16 +116,18 @@ class cData:
         values = lines[i].rstrip().split(",")
         self.poscons.append(array([ int(v) for v in values] ))
         
-   def tripCons(self,mGammas,k):
+   # pick A, find B and C and then return a list of corresponding
+   # pairwise constraints
+   def tripCons(self,mGammas,numTrips):
       gammadiffs = self.findDiffs(mGammas)
       constraints = []
       link = 0   
-      for i in range(k):
-         if(not self.consselect):
-            cons = R.choice(gammadiffs)
+      for i in range(numTrips):
+         if(not self.consselect):  # use random (not metric)
+            A = R.choice(gammadiffs)
             gammadiffs.remove(cons)
          else:
-            cons = gammadiffs.pop(0)
+            A = gammadiffs.pop(0)
          # class1 = sorted(filter(lambda x: x[1] == cons[1],gammadiffs),key=lambda y: y[3])
          # class2 = sorted(filter(lambda x: x[1] == cons[2],gammadiffs),key=lambda y: y[3])
          # class1 = class1[int(np.floor(0.8*len(class1))):]
@@ -134,19 +136,19 @@ class cData:
             # link = 1
          # elif len(class2)>0 and (m.data[cons[4]].cl == str(m.data[class2[-1][4]].cl)):
             # link = -1
-         class1 = self.emclusters[cons[1]].midpoints[:]
-         class2 = self.emclusters[cons[2]].midpoints[:]
-         class1.append(self.emclusters[cons[1]].center)
-         class2.append(self.emclusters[cons[2]].center)
-         if self.data[class1[-1].index].cl == str(self.data[cons[4]].cl):
+         class1mids = self.emclusters[A[1]].midpoints[:]
+         class2mids = self.emclusters[A[2]].midpoints[:]
+         class1mids.append(self.emclusters[A[1]].center)
+         class2mids.append(self.emclusters[A[2]].center)
+         if self.data[class1mids[-1].index].cl == self.data[A[4]].cl:
             link = 2
-         elif self.data[class2[-1].index].cl == str(self.data[cons[4]].cl):
+         elif self.data[class2mids[-1].index].cl == self.data[A[4]].cl:
             link = -2           
          if(link != 0):
-            for i in class1:
-               constraints.append((cons[4],i.index,link))
-            for i in class2:
-               constraints.append((cons[4],i.index,-1*link))
+            for i in class1mids:
+               constraints.append((A[4],i.index,link))
+            for i in class2mids:
+               constraints.append((A[4],i.index,-1*link))
       return constraints
       
    # from an EM.mGammas matrix (normd likelihood of pt i in clust j)
@@ -266,6 +268,7 @@ class cData:
             maxEM = iteration
       print maxNMI
       return maxEM
+
    def goodInitial (self,em):
       consistent = 0
       #Consistent means all the midpoints are same with the center.
