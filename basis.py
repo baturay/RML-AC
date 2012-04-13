@@ -17,6 +17,7 @@ class emcluster:
       self.outerpoints = []
       self.midpoints = []
       self.points = []
+      self.determined = []
 
 class cData:
    def __init__(self,filename):
@@ -72,16 +73,6 @@ class cData:
       new_datum.values = [float(x) for x in values[1:]]
       self.data.append(new_datum)
 
-   # return list of _numC_ triplet or pairwise constraint
-   # depending on self.constype
-   def makeConst(self,numC):
-      if self.constype == 2:
-         return pairCons(numC)
-      elif self.constype == 3:
-         return tripCons(numC)
-      else:
-         return []
-         
    # return list of _numC_ pairwise constraints from self.poscons
    # * list is also appended to self.cons
    # * constraint format is (x,y,link as {-1,1})
@@ -121,42 +112,63 @@ class cData:
         
    # pick A, find B and C and then return a list of corresponding
    # pairwise constraints
-   def tripCons(self,mGammas,numTrips):
+   def tripConsmid(self,mGammas,numTrips):
       gammadiffs = self.findDiffs(mGammas)
       constraints = []
       link = 0   
       for i in range(numTrips):
          if(not self.consselect):  # use random (not metric)
             A = R.choice(gammadiffs)
-            gammadiffs.remove(cons)
+            gammadiffs.remove(A)
          else:
             A = -1
             while A == -1 or A[4] in self.AHistory:
                A = gammadiffs.pop(0)
-            self.AHistory.push(A[4])
-         # class1 = sorted(filter(lambda x: x[1] == cons[1],gammadiffs),key=lambda y: y[3])
-         # class2 = sorted(filter(lambda x: x[1] == cons[2],gammadiffs),key=lambda y: y[3])
-         # class1 = class1[int(np.floor(0.8*len(class1))):]
-         # class2 = class2[int(np.floor(0.8*len(class2))):]
-         # if len(class1)>0 and (m.data[cons[4]].cl == str(m.data[class1[-1][4]].cl)):
-            # link = 1
-         # elif len(class2)>0 and (m.data[cons[4]].cl == str(m.data[class2[-1][4]].cl)):
-            # link = -1
+            self.AHistory.append(A[4])
          class1mids = self.emclusters[A[1]].midpoints[:]
          class2mids = self.emclusters[A[2]].midpoints[:]
          class1mids.append(self.emclusters[A[1]].center)
          class2mids.append(self.emclusters[A[2]].center)
          if self.data[class1mids[-1].index].cl == self.data[A[4]].cl:
-            link = 2
+            link = 1
+            self.emclusters[A[1]].determined.append(A[4])
          elif self.data[class2mids[-1].index].cl == self.data[A[4]].cl:
-            link = -2           
+            link = -1
+            self.emclusters[A[1]].determined.append(A[4])
          if(link != 0):
             for i in class1mids:
-               constraints.append((A[4],i.index,link))
+               constraints.append((A[4],i.cl,link))
             for i in class2mids:
-               constraints.append((A[4],i.index,-1*link))
+               constraints.append((A[4],i.cl,-1*link))
       return constraints
       
+   def tripConsgamma(self,mGammas,numTrips):
+      gammadiffs = self.findDiffs(mGammas)
+      constraints = []
+      link = 0   
+      for i in range(numTrips):
+         if(not self.consselect):  # use random (not metric)
+            A = R.choice(gammadiffs)
+            gammadiffs.remove(A)
+         else:
+            A = -1
+            while A == -1 or A[4] in self.AHistory:
+               A = gammadiffs.pop(0)
+            self.AHistory.append(A[4])
+         class1 = sorted(filter(lambda x: x[1] == A[1],gammadiffs),key=lambda y: y[3])
+         class2 = sorted(filter(lambda x: x[1] == A[2],gammadiffs),key=lambda y: y[3])
+         class1 = class1[int(np.floor(0.8*len(class1))):]
+         class2 = class2[int(np.floor(0.8*len(class2))):]
+         if len(class1)>0 and (m.data[A[4]].cl == str(m.data[class1[-1][4]].cl)):
+            link = 1
+         elif len(class2)>0 and (m.data[A[4]].cl == str(m.data[class2[-1][4]].cl)):
+            link = -1        
+         if(link != 0):
+            for i in class1:
+               constraints.append((A[4],i[4],link))
+            for i in class2:
+               constraints.append((A[4],i[4],-1*link))
+      return constraints   
    # from an EM.mGammas matrix (normd likelihood of pt i in clust j)
    # determine for each datum, most (CA) and second-most (CB) likely
    # cluster assignment and evaluate metric of (CA-CB)/(CA+CB)
@@ -251,7 +263,6 @@ class cData:
                midvalues.append((value+cl.center.values[index])/2)               
             datMidvalues = datum()
             datMidvalues.values = midvalues
-            
             #The real point closest to the imaginary midpoint is found and added.
             mdist = min(self.findMin([datMidvalues],cl),key = lambda x : x[1])
             cl.midpoints.append(mdist[0])
@@ -293,6 +304,7 @@ class cData:
             #All the leftovers...
             if len(wrongclass) == 0:
                consistent += 1
+            else:
                resetCenters.append(ind)
             #Cross constraints between right and wrong classes.
             for i in rightclass:
@@ -307,7 +319,7 @@ class cData:
          print consistent
          #If all classes are not right, restart.
          if consistent != len(self.emclusters):    
-            em.lInitialCenters = []
+            em.resetSomeCenters(em.lInitialCenters,resetCenters)
             em.EM(len(self.emclusters))
             self.createClusters(em)
             self.repPoints(em)
@@ -337,20 +349,19 @@ class cData:
       return EmAlg
       
 if __name__ == "__main__":
-   m = cData(sys.argv[1])
    #Takes in the file and parses into datum's.
-   m.setType("3","metric")
+   m = cData(sys.argv[1])
    #Uses triple constraints and the metric to choose.
-   EmAlg = m.parseCommandLine(sys.argv) 
-   
+   m.setType("3","metric")
    #Starting points from the pickle or not.
-   m.createClusters(EmAlg)
+   EmAlg = m.parseCommandLine(sys.argv) 
    #Creates clusters depending on what EM guessed.
+   m.createClusters(EmAlg)
+   #Finds the outerpoints and the midpoints and assigns them in emclusters.
    m.repPoints(EmAlg)
    EmAlg.bPPC = True 
-   #Finds the outerpoints and the midpoints and assigns them in emclusters.
-   EmAlg = m.goodInitial(EmAlg)
    #This makes the algorithm start with good initial points.
+   EmAlg = m.goodInitial(EmAlg)
    
    
    prevCons = 0
@@ -359,16 +370,16 @@ if __name__ == "__main__":
    print "Initial nmi: ",nmiResult
    
    for numCons in range(1,len(m.data),1):     
-      cons = m.tripCons(EmAlg.mGammas,numCons-prevCons)
+      cons = m.tripConsmid(EmAlg.mGammas,numCons-prevCons)
       prevCons = numCons
       totalcons += len(cons)
       for i in cons:
         EmAlg.mCij[i[0]][i[1]] = i[2]
-        EmAlg.mCij[i[1]][i[0]] = i[2]    
+        EmAlg.mCij[i[1]][i[0]] = i[2] 
       EmAlg.EM(len(m.classlist))
       nmiresult = m.evaluateEM(EmAlg)
       print numCons, ",", nmiresult, ",", totalcons 
-      if(nmiresult == 1 or len(m.data)==numCons):
+      if(nmiresult > 0.999 or len(m.data)==numCons):
          break
    print numCons, ",", nmiresult, ",", totalcons      
          
