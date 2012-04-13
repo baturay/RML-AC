@@ -1,0 +1,21 @@
+ten datasets
+
+graph NMI vs. number of data that user must inspect (13 per triplet)
+
+em by itself
+phase 1 alone
+em then phase 2
+phase 1 phase 2 
+
+just use the highest likelihood for EM
+
+* different methods within phase 1 or phase 2 will be different
+  lines or different graphs
+* can take several starting points from EM and try all of them
+  and either average the results for each point in the plot
+  or draw a line for each starting point
+
+x axis: number of instances examined (13 for a triple)
+y axis: NMI
+
+Also good to implement the starting pointns from Vu2010
