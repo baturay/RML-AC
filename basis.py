@@ -332,7 +332,7 @@ class cData:
       
    def parseCommandLine (self,argv):
       if len(argv) != 2 and len(argv) != 3:
-         print("Error - usage is " + argv[0] + " <data_file> <startingdatapoints> <picklefile>")
+         print("Error - usage is " + argv[0] + " <data_file> <startingdatapoints> ")
          sys.exit(1)   
         
       if len(argv)>2:
@@ -340,8 +340,8 @@ class cData:
          f = open(argv[2],"r")
          centers = pickle.load(f)
          EmAlg.lInitialCenters = centers
-         EmAlg.bPPC = True 
          EmAlg.EM(len(self.classlist))
+         EmAlg.bPPC = True 
       else:
          EmAlg = cEM(self)
          EmAlg.EM(len(self.classlist))
@@ -352,8 +352,8 @@ class cData:
          self.repPoints(EmAlg)
          #This makes the algorithm start with good initial points.
          EmAlg = m.goodInitial(EmAlg)
-         f = open("pickles/"+argv[1]+"pickle","w+")
-         l = EmAlg.lInitialCenters
+         f = open("pickles/"+argv[1].split('/')[-1]+"pickle","w")
+         l = EmAlg.lCenters
          pickle.dump(l,f)
       
       return EmAlg
