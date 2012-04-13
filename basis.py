@@ -332,7 +332,7 @@ class cData:
       
    def parseCommandLine (self,argv):
       if len(argv) != 2 and len(argv) != 3:
-         print("Error - usage is " + argv[0] + " <data_file> <startingdatapoints>")
+         print("Error - usage is " + argv[0] + " <data_file> <startingdatapoints> <picklefile>")
          sys.exit(1)   
         
       if len(argv)>2:
@@ -340,12 +340,22 @@ class cData:
          f = open(argv[2],"r")
          centers = pickle.load(f)
          EmAlg.lInitialCenters = centers
+         EmAlg.bPPC = True 
          EmAlg.EM(len(self.classlist))
       else:
-         EmAlg = self.emRestarts(1)
-         f = open("centers.pickle","w")
-         l = EmAlg.lCenters
+         EmAlg = cEM(self)
+         EmAlg.EM(len(self.classlist))
+         EmAlg.bPPC = True 
+         #Creates clusters depending on what EM guessed.
+         self.createClusters(EmAlg)
+         #Finds the outerpoints and the midpoints and assigns them in emclusters.
+         self.repPoints(EmAlg)
+         #This makes the algorithm start with good initial points.
+         EmAlg = m.goodInitial(EmAlg)
+         f = open("pickles/"+argv[1]+"pickle","w+")
+         l = EmAlg.lInitialCenters
          pickle.dump(l,f)
+      
       return EmAlg
       
 if __name__ == "__main__":
@@ -354,15 +364,7 @@ if __name__ == "__main__":
    #Uses triple constraints and the metric to choose.
    m.setType("3","metric")
    #Starting points from the pickle or not.
-   EmAlg = m.parseCommandLine(sys.argv) 
-   #Creates clusters depending on what EM guessed.
-   m.createClusters(EmAlg)
-   #Finds the outerpoints and the midpoints and assigns them in emclusters.
-   m.repPoints(EmAlg)
-   EmAlg.bPPC = True 
-   #This makes the algorithm start with good initial points.
-   EmAlg = m.goodInitial(EmAlg)
-   
+   EmAlg = m.parseCommandLine(sys.argv)   
    
    prevCons = 0
    totalcons = 0
@@ -370,7 +372,7 @@ if __name__ == "__main__":
    print "Initial nmi: ",nmiResult
    
    for numCons in range(1,len(m.data),1):     
-      cons = m.tripConsmid(EmAlg.mGammas,numCons-prevCons)
+      cons = m.tripConsgamma(EmAlg.mGammas,numCons-prevCons)
       prevCons = numCons
       totalcons += len(cons)
       for i in cons:
