@@ -96,11 +96,7 @@ class cEM:
             if C.min() == 0:
                  cis = np.where(C == 0)
                  C[cis] = np.exp(-745)
-
-            try:
-                C = C.I
-            except:
-                sys.stderr.write("Singular Matrix C, moving on\n")
+            C = C.I
                 
             #self.sErrInfo = self.sErrInfo + "  A: %f, D: %f" % (A, -0.5 * B * C * B.T)
             #self.sErrInfo = self.sErrInfo + "um1"
