@@ -335,8 +335,11 @@ def JLStartingPoint(D, k):
     D2 = cData("data/winenorm3_pyre.txt")
     D2.data = []
     print llCenters
-    for i, V in enumerate(llCenters):
-        D2.addDatum([0] + V, i)  # add 0 to beginning as class
+    i = 0
+    for center in enumerate(llCenters):
+        for V in center:
+            D2.addDatum([0] + list(V), i)  # add 0 to beginning as class
+            i += 1
         
     M2 = cEM(D2)
     M2.EM(k)
