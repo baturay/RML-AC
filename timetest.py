@@ -1,5 +1,5 @@
 import EM
-import basis
+import cData
 
 import time
 import sys
@@ -30,7 +30,7 @@ else:
     else:
         bNewCenters = True
 
-D = basis.cData(sfData)
+D = cData.cData(sfData)
 PPC = EM.EM(D)
 if bNewCenters:
     #PPC = D.emRestarts(10)
