@@ -290,6 +290,7 @@ class cEM:
         # calculate the EM Likelihood
         self.EMLikelihood()
 
+    # internal function for saving the LL of total EM
     def EMLikelihood(self):
         # formula is sum over n,l of gamma(i,l) * z(i,l) where
         # z = 1 if i is in cluster k, else 0
@@ -303,6 +304,10 @@ class cEM:
 
         self.dEMLikelihood = LL
         return LL
+
+    # give the class labels of each data item
+    def Membership(self):
+        return np.ravel(self.mGammas.argmax(1).T)
 
 def printDims(v, textv):
     print "dims ", textv, np.size(v,0), np.size(v,1)

@@ -31,7 +31,8 @@ class starts:
         consistent = 0
         # Consistent means all the midpoints are same with the center.
         constraints = []
-        while consistent != len(emclusters):
+        iters = 0
+        while consistent != len(emclusters) and iters < 1:
             consistent = 0
             resetCenters = []
             for ind,cl in enumerate(emclusters):
@@ -67,6 +68,7 @@ class starts:
             else:
                 em.EM(len(emclusters))
             print "nmi: ", evaluateEM_NMI(D,em)
+            iters += 1
         return em   
 
     # returns a set of initial centers based on a clustering of

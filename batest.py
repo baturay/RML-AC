@@ -1,6 +1,6 @@
 import sys
 from utils import evaluateEM_NMI
-import cons
+import Cons
 from cData import *
 import RepPoints
 import Starts
@@ -48,9 +48,11 @@ def main():
     nmiResult = evaluateEM_NMI(D, EmAlg)
     print "Initial nmi: ",nmiResult
     
-    consobj = cons.cCons()
-    for numCons in range(1,len(m.data)/4,1):
-        cons = consobj.tripConsgamma(EmAlg.mGammas,numCons-prevCons)
+    consobj = Cons.cCons(D)
+    for numCons in range(1,len(D.data)/4,1):
+        consobj.constype = Cons.cCons.eConsType.TripCenterChunk
+        consobj.centerChunkSize = 0.2
+        cons = consobj.tripCons(EmAlg.mGammas,numCons-prevCons)
         prevCons = numCons
         totalcons += len(cons)
         for i in cons:
