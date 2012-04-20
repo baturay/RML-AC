@@ -2,6 +2,7 @@ import EM
 from NMI import nmi
 import numpy as np
 from utils import evaluateEM_NMI
+from utils import maybeWrite
 
 class starts:
     def __init__(self):
@@ -25,14 +26,15 @@ class starts:
         return maxEM
 
     # using the representative points metric, find good initial centers
-    # given cData object D and emclusters as [ emcluster ]
-    # RepPts ad RepPoints object (with options filled in)
-    def goodInitial (self,D,em,emclusters,RepPts):
+    # given cData object D and emclusters as [ emcluster ],
+    # and RepPts as RepPoints object (with options filled in)
+    # and fp as file to write results each iteration
+    def goodInitial (self,D,em,emclusters,RepPts,fp):
         consistent = 0
         # Consistent means all the midpoints are same with the center.
         constraints = []
         iters = 0
-        while consistent != len(emclusters) and iters < 1:
+        while consistent != len(emclusters) and iters < 5:
             consistent = 0
             resetCenters = []
             for ind,cl in enumerate(emclusters):
@@ -62,13 +64,19 @@ class starts:
             # If all classes are not right, restart.
             if consistent != len(emclusters):    
                 em.resetSomeCenters(em.lInitialCenters,resetCenters)
-                em.EM(len(emclusters))
-                emclusts = RepPts.createClusters(em)
-                RepPts.repPoints(em, emclusts)
-            else:
-                em.EM(len(emclusters))
-            print "nmi: ", evaluateEM_NMI(D,em)
+            em.EM(len(emclusters))
+            emclusters = RepPts.createClusters(em)
+            RepPts.repPoints(em, emclusters)
+            print "goodInitial iter nmi: ", evaluateEM_NMI(D,em)
             iters += 1
+
+            # queries,cons,likelihood,NMI
+            maybeWrite(fp,
+                       "%d,%d,%f,%f\n" % (iters*len(emclusters)*6,
+                                          len(constraints),
+                                          em.dEMLikelihood,
+                                          evaluateEM_NMI(D,em) ) )
+            
         return em   
 
     # returns a set of initial centers based on a clustering of
@@ -105,3 +113,4 @@ class starts:
         M2.EM(k)
         return M2.lCenters    
         
+

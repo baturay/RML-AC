@@ -53,7 +53,7 @@ class RepPoints:
             cl.outerpoints.append(cdist[-1][0])
             cl.points.remove(cdist[-1][0])
             # Other outerpoints are found by finding the maxmin of a point.
-            for i in range(1):#5):
+            for i in range(5):
                 odist = max(self.findMin(cl.outerpoints,cl),key = lambda x : x[1])                     
                 cl.outerpoints.append(odist[0])
                 cl.points.remove(odist[0])

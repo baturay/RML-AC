@@ -28,7 +28,7 @@ def parseCommandLine (D,argv):
       RP.repPoints(EmAlg, emclusts)
       # This makes the algorithm start with good initial points.
       starter = Starts.starts()
-      EmAlg = starter.goodInitial(D, EmAlg, emclusts, RP)
+      EmAlg = starter.goodInitial(D, EmAlg, emclusts, RP, 0)
       f = open("pickles/"+argv[1].split('/')[-1]+"pickle","w")
       pickle.dump(EmAlg,f)
       EmAlg.EM(len(D.classlist))
