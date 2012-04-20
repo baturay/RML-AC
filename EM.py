@@ -8,6 +8,7 @@ import scipy.spatial as sp_s
 from cData import *
 import random
 import sys
+import copy
 
 # this module contains a class that performs EM
 # clustering.  The input data is in the 'machine' format
@@ -156,6 +157,7 @@ class cEM:
             if self.bVerbose:
                 print iters, ",",
 
+            G = G_old.copy()
             try:
                 G = mat([ [ g(i, l, bPPC) if iters > 0 else g(i,l,False)
                             for l in range(len(lCenters)) ]
