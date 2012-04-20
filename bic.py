@@ -1,5 +1,5 @@
 import sys
-import basis
+import cData
 import EM
 import math
 import numpy as np
@@ -69,5 +69,5 @@ if __name__ == "__main__":
         print "usage: " + sys.argv[0] + " filename"
         sys.exit(1)
     
-    D = basis.cData(sys.argv[1])
+    D = cData.cData(sys.argv[1])
     print "best k %d:" % bicK(D)

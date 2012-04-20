@@ -5,7 +5,7 @@ from numpy import matrix
 from numpy import array
 from numpy import mat
 import scipy.spatial as sp_s
-from basis import cData
+from cData import *
 import random
 import sys
 
@@ -162,7 +162,7 @@ class cEM:
                           for i in range(nData) ] )
                 #G = mat( np.fromfunction( np.vectorize(lambda i, j: g(i, j, bPPC) if iters > 0 else g(i, j, False)),
                 #                          (nData, len(lCenters)) ) )
-            except numpy.linalg.linalg.LinAlgError:
+            except np.linalg.linalg.LinAlgError:
                 print "Singular matrix: moving on"
                 break
 
@@ -290,6 +290,7 @@ class cEM:
         # calculate the EM Likelihood
         self.EMLikelihood()
 
+    # internal function for saving the LL of total EM
     def EMLikelihood(self):
         # formula is sum over n,l of gamma(i,l) * z(i,l) where
         # z = 1 if i is in cluster k, else 0
@@ -304,51 +305,19 @@ class cEM:
         self.dEMLikelihood = LL
         return LL
 
+    # give the class labels of each data item
+    def Membership(self):
+        return np.ravel(self.mGammas.argmax(1).T)
+
 def printDims(v, textv):
     print "dims ", textv, np.size(v,0), np.size(v,1)
 
 def printDim(v, textv):
     print "dim ", textv, np.size(v,0)
 
-
-# returns a set of initial centers based on a clustering of
-# the centers of several initial clusterings
-# * D is the data (cData) object
-# * k is the number of classes (0 -> use #classes from D)
-def JLStartingPoint(D, k):
-    if k == 0:
-        k = len(D.classes)
-
-    M = cEM(D)
-    M.bPPC = False
-    llCenters = []
-    # get 20 different centers from running random-restarts of EM
-    for iRestart in range(20):
-        print "running EM ", iRestart, "..."
-        M.lInitialCenters = []
-        M.EM(k)
-        llCenters.append(M.lCenters)
-
-    # **** horrible hack - assumes this file exists because
-    # it is not trivial to add a constructor that takes
-    # a different type of data so a filename is needed
-    D2 = cData("data/winenorm3_pyre.txt")
-    D2.data = []
-    print llCenters
-    i = 0
-    for center in enumerate(llCenters):
-        for V in center:
-            D2.addDatum([0] + list(V), i)  # add 0 to beginning as class
-            i += 1
-        
-    M2 = cEM(D2)
-    M2.EM(k)
-    return M2.lCenters    
-
-
 if __name__ == "__main__":
-    import basis
-    D = basis.cData("data/winenorm3_pyre.txt")
+    import cData
+    D = cData.cData("data/winenorm3_pyre.txt")
     M = cEM(D)
     M.EM(3)
     

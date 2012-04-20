@@ -323,6 +323,8 @@ class cData:
             em.EM(len(self.emclusters))
             self.createClusters(em)
             self.repPoints(em)
+         else:
+            em.EM(len(self.emclusters))
          Estimated = np.ravel(em.mGammas.argmax(1).T)
          print "nmi: ",nmi(Estimated,self.classes)
       return em   
@@ -338,10 +340,11 @@ class cData:
       if len(argv)>2:
          EmAlg = cEM(self)
          f = open(argv[2],"r")
-         centers = pickle.load(f)
-         EmAlg.lInitialCenters = centers
+         EmAlg = pickle.load(f)
          EmAlg.EM(len(self.classlist))
          EmAlg.bPPC = True 
+         self.createClusters(EmAlg)
+         self.repPoints(EmAlg)
       else:
          EmAlg = cEM(self)
          EmAlg.EM(len(self.classlist))
@@ -351,11 +354,11 @@ class cData:
          #Finds the outerpoints and the midpoints and assigns them in emclusters.
          self.repPoints(EmAlg)
          #This makes the algorithm start with good initial points.
-         EmAlg = m.goodInitial(EmAlg)
+         EmAlg = self.goodInitial(EmAlg)
          f = open("pickles/"+argv[1].split('/')[-1]+"pickle","w")
-         l = EmAlg.lCenters
-         pickle.dump(l,f)
-      
+         pickle.dump(EmAlg,f)
+         EmAlg.EM(len(self.classlist))
+         f.close()
       return EmAlg
       
 if __name__ == "__main__":
@@ -371,7 +374,7 @@ if __name__ == "__main__":
    nmiResult = m.evaluateEM(EmAlg)
    print "Initial nmi: ",nmiResult
    
-   for numCons in range(1,len(m.data),1):     
+   for numCons in range(1,len(m.data)/4,1):     
       cons = m.tripConsgamma(EmAlg.mGammas,numCons-prevCons)
       prevCons = numCons
       totalcons += len(cons)
