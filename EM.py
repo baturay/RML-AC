@@ -157,7 +157,7 @@ class cEM:
             if self.bVerbose:
                 print iters, ",",
 
-            G = G_old.copy()
+            G = mat(G_old).copy()
             try:
                 G = mat([ [ g(i, l, bPPC) if iters > 0 else g(i,l,False)
                             for l in range(len(lCenters)) ]
@@ -166,6 +166,7 @@ class cEM:
                 #                          (nData, len(lCenters)) ) )
             except np.linalg.linalg.LinAlgError:
                 print "Singular matrix: moving on"
+                print "  problem at iter %d of EM" % iters
                 break
 
             self.mLikelihood_il = G.copy()
