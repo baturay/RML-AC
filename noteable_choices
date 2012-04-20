@@ -1,0 +1,9 @@
+* when starting points are saved in parts_exp,
+  we actually save the whole EM, which means that
+  we start the next thing with not only the initial
+  centers but also the other parameters of EM
+
+* since tripcons is not non-deterministic, we do not
+  run multiple times per starting position
+
+* limited the starting points finder to 5 iterations
