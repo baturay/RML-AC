@@ -173,19 +173,20 @@ if __name__ == "__main__":
     for dfname in lDataFiles:
         D = cData.cData("data/" + dfname + ".csv")
 
-        #EMStartsS1 = scenario1(D, "results/" + sNickname + "." + dfname)
+        # scenario 1
+        EMStartsS1 = scenario1(D, "results/" + sNickname + "." + dfname)
         pf = open("results/" + sNickname + "." + dfname + ".scen1.pickle", "w")
         pickle.dump(EMStartsS1, pf)
         pf.close()
 
         # load results from scenario 1 pickle
         #pf = open("results/" + sNickname + "." + dfname + ".scen1.pickle")
-        #EMStarts = pickle.load(pf)
+        #EMStartsS1 = pickle.load(pf)
         #pf.close()
 
         # scenario 2
         print "running scenario 2"
-        dEMStartsS2 = scenario2(D, EMStarts, "results/" + sNickname + "." + dfname)
+        dEMStartsS2 = scenario2(D, EMStartsS1, "results/" + sNickname + "." + dfname)
         print "pickling results of scenario 2"
         pf = open("results/" + sNickname + "." + dfname + ".scen2.pickle", "w")
         pickle.dump(dEMStartsS2, pf)
@@ -199,8 +200,8 @@ if __name__ == "__main__":
         # scenario 3
         print "running scenario 3"
         sFileStub =  "results/" + sNickname + "." + dfname
-        f = open(sFileStub + ".scen" + str(sNum) + ".results", "w")
-        TripConsTest(D, 3, EMStarts, f)
+        f = open(sFileStub + ".scen3" + ".results", "w")
+        TripConsTest(D, 3, EMStartsS1, f)
 
         # scenario 4
         print "running scenario 4"
