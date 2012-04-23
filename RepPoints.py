@@ -46,12 +46,12 @@ class RepPoints:
         for cl in emclusters:
             # Compares every point to the calculated center.
             cdist = sorted(self.findMin([cl.center],cl),key = lambda x : x[1])
+            if (len (cl.points) <= 1): 
+               continue
             # Finds the closest real point and assigns it.
             cl.center = cdist[0][0]
             # Removes it from the remaining points.
             cl.points.remove(cdist[0][0])        
-            if (len (cl.points) == 0): 
-               continue
             # The largest distance from the center is the first outerpoint.
             cl.outerpoints.append(cdist[-1][0])
             cl.points.remove(cdist[-1][0])

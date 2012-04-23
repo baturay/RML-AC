@@ -35,9 +35,13 @@ class starts:
         constraints = []
         iters = 0
         while consistent != len(emclusters) and iters < 5:
+            print consistent," ",len(emclusters)
             consistent = 0
             resetCenters = []
             for ind,cl in enumerate(emclusters):
+                if(len(cl.points) <= 1):
+                    resetCenters.append(ind)
+                    continue
                 realpoints = [D.data[i.index] for i in cl.midpoints]
                 realcenter = D.data[cl.center.index]
                 # Gets the real classes so we can do the simulation.
@@ -67,7 +71,7 @@ class starts:
             em.EM(len(emclusters))
             emclusters = RepPts.createClusters(em)
             RepPts.repPoints(em, emclusters)
-            print "goodInitial iter nmi: ", evaluateEM_NMI(D,em)
+            print "goodInitial iter nmi: ", evaluateEM_NMI(D,em)," ",iters
             iters += 1
 
             # queries,cons,likelihood,NMI
