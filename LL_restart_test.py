@@ -1,19 +1,18 @@
 import numpy
 import EM
 import cData
-
-D = cData.cData("data/winenorm3_pyre.txt")
-M = EM.cEM(D)
-
-M.bPPC = False
+import utils
 
 # run EM several times and get the likelihood
 for iRestart in range(20):
-    M.lInitialCenters = []
+    D = cData.cData("data/winenorm3_pyre.csv")
+    # D = cData.cData("data/normvert.csv")
+    M = EM.cEM(D)
+    M.bPPC = False
+
     M.EM(3)
     print M.dEMLikelihood,
     print " nmi: ",
-    estimated = numpy.ravel(M.mGammas.argmax(1).T)
-    print cData.nmi(estimated, D.real)
+    print utils.evaluateEM_NMI(D, M)
 
     

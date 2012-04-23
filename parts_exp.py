@@ -156,53 +156,80 @@ def scenario4(D, dEMStarts, sFileStub):
         f.close()
 
 
-lDataFiles = ["winenorm3_pyre"]
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print "Please specify a nickname for the results"
-        exit(1)
-    elif len(sys.argv) == 3: # includes filename stub of input
-        lDataFiles = [ sys.argv[2] ]
-    else:
-        print "Correct usage:"
-        print "%s result_nickname [input filename stub]" % sys.argv[0]
-        print "Where optional IFS will be used as data file"
-        print "  data/IFS.csv"
-    sNickname = sys.argv[1]
+def errmsg():
+    print "  Correct usage:"
+    print "    %s result_nickname [input filename stub] [commands]" % sys.argv[0]
+    print "  Where optional input filename stub (IFS) chooses data file:"
+    print "     data/IFS.csv"
+    print "  and [commands] is a string with pieces of the experiment"
+    print "  to run, separated by _.  Commands available:"
+    print "    s1 - scenario 1, including pickle"
+    print "    p1 - load existing pickle for scenario 1"
+    print "    s2, p2, s3, s4 as you'd expect"
+    print "  for example, you would use p1_s2_s3_s4"
+    print "  to load pickle from previous run of s1 then run"
+    print "  the rest of the phases"
 
+if __name__ == "__main__":
+    sNickname = ""
+    lDataFiles = ["winenorm3_pyre"]
+    sCommands = "s1_s2_s3_s4"
+
+    argc = len(sys.argv)
+    if argc >= 2:
+        sNickname = sys.argv[1]
+    if argc >= 3: # includes filename stub of input
+        lDataFiles = [ sys.argv[2] ]
+    if argc == 4:
+        sCommands = sys.argv[3]
+    if argc < 2 or argc > 4:
+        errmsg()
+        exit(1)
+
+    lCommands = sCommands.split("_")
     for dfname in lDataFiles:
         D = cData.cData("data/" + dfname + ".csv")
 
         # scenario 1
-        EMStartsS1 = scenario1(D, "results/" + sNickname + "." + dfname)
-        pf = open("results/" + sNickname + "." + dfname + ".scen1.pickle", "w")
-        pickle.dump(EMStartsS1, pf)
-        pf.close()
+        if "s1" in lCommands:
+            print "running scenario 1"
+            EMStartsS1 = scenario1(D, "results/" + sNickname + "." + dfname)
+            print "pickling results of scenario 1"
+            pf = open("results/" + sNickname + "." + dfname + ".scen1.pickle", "w")
+            pickle.dump(EMStartsS1, pf)
+            pf.close()
 
         # load results from scenario 1 pickle
-        #pf = open("results/" + sNickname + "." + dfname + ".scen1.pickle")
-        #EMStartsS1 = pickle.load(pf)
-        #pf.close()
-
+        if "p1" in lCommands:
+            print "loading scenario 1 results from pickle"
+            pf = open("results/" + sNickname + "." + dfname + ".scen1.pickle")
+            EMStartsS1 = pickle.load(pf)
+            pf.close()
+        
         # scenario 2
-        print "running scenario 2"
-        dEMStartsS2 = scenario2(D, EMStartsS1, "results/" + sNickname + "." + dfname)
-        print "pickling results of scenario 2"
-        pf = open("results/" + sNickname + "." + dfname + ".scen2.pickle", "w")
-        pickle.dump(dEMStartsS2, pf)
-        pf.close()
+        if "s2" in lCommands:
+            print "running scenario 2"
+            dEMStartsS2 = scenario2(D, EMStartsS1, "results/" + sNickname + "." + dfname)
+            print "pickling results of scenario 2"
+            pf = open("results/" + sNickname + "." + dfname + ".scen2.pickle", "w")
+            pickle.dump(dEMStartsS2, pf)
+            pf.close()
 
         # load results from scenario 2 pickle
-        #pf = open("results/" + sNickname + "." + dfname + ".scen2.pickle")
-        #dEMStartsS2 = pickle.load(pf)
-        #pf.close()
-
+        if "p2" in lCommands:
+            pf = open("results/" + sNickname + "." + dfname + ".scen2.pickle")
+            dEMStartsS2 = pickle.load(pf)
+            pf.close()
+            
         # scenario 3
-        print "running scenario 3"
-        sFileStub =  "results/" + sNickname + "." + dfname
-        f = open(sFileStub + ".scen3" + ".results", "w")
-        TripConsTest(D, 3, EMStartsS1, f)
-
+        if "s3" in lCommands:
+            print "running scenario 3"
+            sFileStub =  "results/" + sNickname + "." + dfname
+            f = open(sFileStub + ".scen3" + ".results", "w")
+            TripConsTest(D, 3, EMStartsS1, f)
+            
         # scenario 4
-        print "running scenario 4"
-        scenario4(D, dEMStartsS2, "results/" + sNickname + "." + dfname)
+        if "s4" in lCommands:
+            print "running scenario 4"
+            scenario4(D, dEMStartsS2, "results/" + sNickname + "." + dfname)
+        
