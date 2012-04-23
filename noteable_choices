@@ -7,3 +7,6 @@
   run multiple times per starting position
 
 * limited the starting points finder to 5 iterations
+
+* in SmartStarts we now stop asking about clusters that
+  are determined to be consistent (APR 23 2012)

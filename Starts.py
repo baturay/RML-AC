@@ -34,26 +34,34 @@ class starts:
         # Consistent means all the midpoints are same with the center.
         constraints = []
         iters = 0
-        while consistent != len(emclusters) and iters < 5:
+
+        indEMClusters = range(len(emclusters))
+        while len(indEMClusters) != 0 and iters < 5:
             print consistent," ",len(emclusters)
             consistent = 0
             resetCenters = []
-            for ind,cl in enumerate(emclusters):
+            
+            for ind in indEMClusters:
+                cl = emclusters[ind]
                 if(len(cl.midpoints) == 0):
                     resetCenters.append(ind)
                     continue
+
+                # simulate feedback from real classes
                 realpoints = [D.data[i.index] for i in cl.midpoints]
                 realcenter = D.data[cl.center.index]
-                # Gets the real classes so we can do the simulation.
+                # points in realpoints s.t. their real class is same as center
                 rightclass = filter(lambda x: x.cl==realcenter.cl,realpoints)
                 rightclass.append(realcenter)
-                # Filters the midpoints same with center and then adds center.
                 wrongclass = filter(lambda x: x.cl!=realcenter.cl,realpoints)
+
                 # All the leftovers...
                 if len(wrongclass) == 0:
                     consistent += 1
+                    indEMClusters.remove(ind)
                 else:
                     resetCenters.append(ind)
+                    
                 # Cross constraints between right and wrong classes.
                 for i in rightclass:
                     for j in realpoints:
@@ -66,8 +74,7 @@ class starts:
                     em.mCij[i[1]][i[0]] = i[2]  
             print consistent
             # If all classes are not right, restart.
-            if consistent != len(emclusters):    
-                em.resetSomeCenters(em.lInitialCenters,resetCenters)
+            em.resetSomeCenters(em.lInitialCenters,resetCenters)
             em.EM(len(emclusters))
             emclusters = RepPts.createClusters(em)
             RepPts.repPoints(em, emclusters)

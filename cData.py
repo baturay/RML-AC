@@ -35,5 +35,5 @@ class cData:
          lines = fin.readlines()
       for i in range(1, len(lines)):
          values = lines[i].rstrip().split(",")
-         self.addDatum(array(values),i)
+         self.addDatum(array(values),i-1)
       
