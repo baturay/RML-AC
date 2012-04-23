@@ -12,8 +12,9 @@ class emcluster:
 
 class RepPoints:
     def __init__(self):
-        bOptions = True
-
+        self.bOptions = True
+        self.numMidpoints = 4
+        
     # return list of emcluster objects 
     # representing the clusters given by the _EM_ argument
     def createClusters(self,EM):
@@ -53,11 +54,18 @@ class RepPoints:
             cl.outerpoints.append(cdist[-1][0])
             cl.points.remove(cdist[-1][0])
             # Other outerpoints are found by finding the maxmin of a point.
-            for i in range(1):#5):
+            if(len(cl.points) <= self.numMidpoints):
+                cl.midpoints = cl.points[:]
+                print [EM.mData.data[i.index].cl for i in cl.midpoints],EM.mData.data[cl.center.index].cl
+                continue
+            for i in range(self.numMidpoints-1):
                 odist = max(self.findMin(cl.outerpoints,cl),key = lambda x : x[1])                     
                 cl.outerpoints.append(odist[0])
                 cl.points.remove(odist[0])
-            
+            if(len(cl.points) <= self.numMidpoints):
+                cl.midpoints = cl.points[:]
+                print [EM.mData.data[i.index].cl for i in cl.midpoints],EM.mData.data[cl.center.index].cl
+                continue          
             for o in cl.outerpoints:
                 midvalues = []
                 # midvalues <- calculated mid point
@@ -70,7 +78,7 @@ class RepPoints:
                 cl.midpoints.append(mdist[0])
                 cl.points.remove(mdist[0])
             
-            print [EM.mData.data[i.index].cl for i in cl.midpoints]
+            print [EM.mData.data[i.index].cl for i in cl.midpoints],EM.mData.data[cl.center.index].cl
 
     # return a list of distances from each point in the cluster
     # to the closest source
