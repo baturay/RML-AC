@@ -50,6 +50,8 @@ class RepPoints:
             cl.center = cdist[0][0]
             # Removes it from the remaining points.
             cl.points.remove(cdist[0][0])        
+            if (len (cl.points) == 0): 
+               continue
             # The largest distance from the center is the first outerpoint.
             cl.outerpoints.append(cdist[-1][0])
             cl.points.remove(cdist[-1][0])
