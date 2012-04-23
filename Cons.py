@@ -13,6 +13,7 @@ class cCons:
         self.constype = cCons.eConsType.TripCenterChunk
         self.centerChunkSize = 0.20
         self.consselect = 1 # 0 for random, 1 for using metric
+        self.ConsStrength = 2
         
         # keep track of A values selected for triplet constraints
         self.AHistory = []
@@ -39,9 +40,9 @@ class cCons:
           if(not self.consfile):
              link = 0
              if(self.D.data[pair[0]].cl==self.D.data[pair[1]].cl):
-                link = 1
+                link = self.ConsStrength
              else:
-                link = -1 
+                link = -self.ConsStrength
              pair += (link,)
           self.cons.append(pair)
           cons.append(pair)
@@ -83,10 +84,10 @@ class cCons:
          class1mids.append(self.emclusters[A.firstindex].center)
          class2mids.append(self.emclusters[A.secondindex].center)
          if self.D.data[class1mids[-1].index].cl == self.D.data[A.index].cl:
-            link = 1
+            link = self.ConsStrength
             self.emclusters[A.firstindex].determined.append(A.index)
          elif self.D.data[class2mids[-1].index].cl == self.D.data[A.index].cl:
-            link = -1
+            link = -self.ConsStrength
             self.emclusters[A.firstindex].determined.append(A.index)
          if(link != 0):
             for i in class1mids:
@@ -116,9 +117,9 @@ class cCons:
          class1 = class1[int((1-self.centerChunkSize)*len(class1)):]
          class2 = class2[int((1-self.centerChunkSize)*len(class2)):]
          if len(class1)>0 and (self.D.data[A.index].cl == str(self.D.data[class1[-1].index].cl)):
-            link = 10
+            link = self.ConsStrength
          elif len(class2)>0 and (self.D.data[A.index].cl == str(self.D.data[class2[-1].index].cl)):
-            link = -10        
+            link = -self.ConsStrength
          if(link != 0):
             for i in class1:
                constraints.append((A.index,i.index,link))
