@@ -39,7 +39,7 @@ class starts:
             consistent = 0
             resetCenters = []
             for ind,cl in enumerate(emclusters):
-                if(len(cl.points) <= 1):
+                if(len(cl.midpoints) == 0):
                     resetCenters.append(ind)
                     continue
                 realpoints = [D.data[i.index] for i in cl.midpoints]
