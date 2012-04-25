@@ -36,12 +36,14 @@ class starts:
         iters = 0
 
         indEMClusters = range(len(emclusters))
+        lResetExclusions = []
+        numUserQueries = 0
         while len(indEMClusters) != 0 and iters < 5:
             print consistent," ",len(emclusters)
             consistent = 0
             resetCenters = []
             
-            for ind in indEMClusters:
+            for ind in indEMClusters[:]:
                 cl = emclusters[ind]
                 if(len(cl.midpoints) == 0):
                     resetCenters.append(ind)
@@ -50,6 +52,7 @@ class starts:
                 # simulate feedback from real classes
                 realpoints = [D.data[i.index] for i in cl.midpoints]
                 realcenter = D.data[cl.center.index]
+                numUserQueries += len(realpoints) + 1
                 # points in realpoints s.t. their real class is same as center
                 rightclass = filter(lambda x: x.cl==realcenter.cl,realpoints)
                 rightclass.append(realcenter)
@@ -59,6 +62,7 @@ class starts:
                 if len(wrongclass) == 0:
                     consistent += 1
                     indEMClusters.remove(ind)
+                    lResetExclusions.extend( [x.index for x in rightclass] )
                 else:
                     resetCenters.append(ind)
                     
@@ -66,15 +70,16 @@ class starts:
                 for i in rightclass:
                     for j in realpoints:
                         if j in wrongclass:
-                            constraints.append([i.index,j.index,-1])
+                            constraints.append([i.index,j.index,-2])
                         elif j!= i:
-                            constraints.append([i.index,j.index,1])
+                            constraints.append([i.index,j.index,2])
                 for i in constraints:
                     em.mCij[i[0]][i[1]] = i[2]
-                    em.mCij[i[1]][i[0]] = i[2]  
+                    em.mCij[i[1]][i[0]] = i[2]
+
             print consistent
             # If all classes are not right, restart.
-            em.resetSomeCenters(em.lInitialCenters,resetCenters)
+            em.resetSomeCenters(em.lInitialCenters,resetCenters,lResetExclusions)
             em.EM(len(emclusters))
             emclusters = RepPts.createClusters(em)
             RepPts.repPoints(em, emclusters)
@@ -83,12 +88,12 @@ class starts:
 
             # queries,cons,likelihood,NMI
             maybeWrite(fp,
-                       "%d,%d,%f,%f\n" % (iters*len(emclusters)*6,
+                       "%d,%d,%f,%f\n" % (numUserQueries,
                                           len(constraints),
                                           em.dEMLikelihood,
                                           evaluateEM_NMI(D,em) ) )
-            
-        return em   
+        
+        return em
 
     # returns a set of initial centers based on a clustering of
     # the centers of several initial clusterings
@@ -97,7 +102,7 @@ class starts:
     def JLStartingPoint(D, k):
         if k == 0:
             k = len(D.classes)
-
+        
         M = cEM(D)
         M.bPPC = False
         llCenters = []
@@ -122,6 +127,4 @@ class starts:
             
         M2 = cEM(D2)
         M2.EM(k)
-        return M2.lCenters    
-        
-
+        return M2.lCenters

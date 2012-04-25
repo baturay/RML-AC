@@ -24,7 +24,7 @@ class cEM:
         self.numSteps = 0
         self.lLastCenters = []  # [ centers as [values] ]
         self.lCenters = [] # [ centers as [values] ]
-        self.lUsedCenterInds = [] # indices of data already chosen as centers
+        self.lUnUsedCenterInds = [] # indices of data already chosen as centers
 
         self.bPPC = False # use PPC
 
@@ -91,20 +91,23 @@ class cEM:
             
             # gamma value for standard EM
             A = lPl[l] * coef * sigCoefs[l]
-            #self.sErrInfo = "(abits - %f * %f * %f)" % (lPl[l], coef, sigCoefs[l])
             B = mat(self.mData.data[i].values) - mat(lCenters[l])
             C = mat(lSig[l])
             if C.min() == 0:
                  cis = np.where(C == 0)
                  C[cis] = np.exp(-745)
-            C = C.I
+
+            try:
+                C = C.I
+            except:
+                print "singular handled"
+                print C
+                C = C + 1e-10 * np.eye(len(C))
+                C = C.I
                 
-            #self.sErrInfo = self.sErrInfo + "  A: %f, D: %f" % (A, -0.5 * B * C * B.T)
-            #self.sErrInfo = self.sErrInfo + "um1"
             #g_EM =  A * np.exp(-0.5 * B * C * B.T )
             
             g_EM =  np.log(A) + B * C * B.T * -0.5
-            #self.sErrInfo += "um2"
             g_EM = g_EM[0,0]
             
             if bPPC:
@@ -113,7 +116,6 @@ class cEM:
                                              for j in range(nData) if i != j ]
                                            ) )
                 return g_PPC + g_EM
-            #self.sErrInfo += "um3"
             return g_EM
 
         def gammaConverge():
@@ -127,15 +129,29 @@ class cEM:
         # normalize each row ( over l for each i )
         # also apply exp
         def normalize(G):
-            #rowmins = G.min(axis=1)
+            # say M is the max value such that exp(M) < inf
+            # we must avoid any items of LL in G being >= M.
+            # further, we must avoid M - log(k), since if there
+            # are k elements of M, we get a row sum, after the
+            # exponent is applied, of k exp(M).  To avoid this,
+            # me make sure the max of any row's LL is M - log(k) -1
+            # since k exp(M-log(k)) = exp(M)  ( 1 is for rounding error)
             rowmaxs = G.max(axis=1)
-            #rowranges = rowmaxs - rowmins
-            # 18 is half difference between underflow and overflow abs values
-            G = G - (rowmaxs - 700)
+            k = G.shape[1]
+            maxval = 709 - np.log(k)
+
+            # fix G before applying exponent (as explained above)
+            # * this syntax lets us fix each row and stack them back
+            #   into a matrix
+            G = np.vstack( [ G[i] - (rowmaxs[i]-(maxval-1))
+                             if rowmaxs[i] >= maxval
+                             else G[i]
+                             for i in range(len(G)) ] )
+
             G = np.exp(G)
             rowsums = G.sum(axis=1)  # matrix  |row| x 1
-            
             nG = G / rowsums
+            
             if nG.min() == 0:
                 gis = np.where(nG == 0)
                 nG[gis] = np.exp(-745)
@@ -156,7 +172,7 @@ class cEM:
         while iters < iterBound and not (iters != 0 and bGammaConverged):
             if self.bVerbose:
                 print iters, ",",
-
+            
             G = mat(G_old).copy()
             try:
                 G = mat([ [ g(i, l, bPPC) if iters > 0 else g(i,l,False)
@@ -168,7 +184,7 @@ class cEM:
                 print "Singular matrix: moving on"
                 print "  problem at iter %d of EM" % iters
                 break
-
+            
             self.mLikelihood_il = G.copy()
             G = normalize(G)
             if iters > 0:
@@ -184,14 +200,20 @@ class cEM:
     
     # in the list of centers _lCenters_, swap out the items at indices in the
     # list _lIndices_ with a randomly chosen data point
-    def resetSomeCenters(self, lCenters, lIndices):
-        if self.lUsedCenterInds == []:
-            self.lUsedCenterInds = range(len(self.mData.data))
+    # Cannot include indices in lExclusions
+    def resetSomeCenters(self, lCenters, lIndices, lExclusions):
+        if self.lUnUsedCenterInds == []:
+            self.lUnUsedCenterInds = range(len(self.mData.data))
+
+        lAvailable = self.lUnUsedCenterInds[:]
+        for i in lExclusions:
+            if i in lAvailable:
+                lAvailable.remove(i)
         
         for i in lIndices:
-            icenteri = random.sample(range(len(self.lUsedCenterInds)), 1)
+            icenteri = random.sample(range(len(lAvailable)), 1)
             icenteri = icenteri[0]  # random.sample returns a list
-            icenter = self.lUsedCenterInds.pop(icenteri)
+            icenter = lAvailable.pop(icenteri)
             lCenters[i] = self.mData.data[icenter].values
 
     # run the EM algorithm looking for given number of clusters
@@ -212,7 +234,7 @@ class cEM:
                 sys.exit(1)
         else:  # pick centers from data
             self.lInitialCenters = range(numCenters)
-            self.resetSomeCenters(self.lInitialCenters, range(numCenters))
+            self.resetSomeCenters(self.lInitialCenters, range(numCenters), [])
             if self.bVerbose:
                 print "initcenters ", self.lInitialCenters
 
@@ -241,7 +263,7 @@ class cEM:
             # recalculate parameters
             lNl = array([ np.sum(self.mGammas[:,l]) for l in range(len(self.lCenters)) ])
             lnli = np.where(lNl == 0)
-            lNl[lnli] = np.exp(-745)
+            lNl[lnli] = np.exp(-709)
             lPl = [ lNl[l] / nData for l in range(len(self.lCenters)) ]
             # ****** lcenters as matrix?
             #self.lCenters = [ np.multiply(1/lNl[l],

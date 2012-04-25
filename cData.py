@@ -7,7 +7,7 @@ from NMI import *
 class datum:
    def __init__(self, values=[]):
       self.values = values
-      self.name = ""
+      self.index = -1
       self.cl = ""
       
 class cData:

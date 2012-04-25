@@ -127,6 +127,8 @@ def TripConsTest(D, sNum, EMStarts, fp):
                 elif option == TripConsOptions.MidCons:
                     consobj.constype = Cons.cCons.eConsType.TripMids
 
+                print em.mLikelihood_il
+
                 cons = consobj.tripCons(em.mGammas,numTrips-prevTrips)
                 prevTrips = numTrips
                 totalCons += len(cons)
