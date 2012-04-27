@@ -30,7 +30,6 @@ class starts:
     # and RepPts as RepPoints object (with options filled in)
     # and fp as file to write results each iteration
     def goodInitial (self,D,em,emclusters,RepPts,fp):
-        consistent = 0
         # Consistent means all the midpoints are same with the center.
         constraints = []
         iters = 0
@@ -38,14 +37,16 @@ class starts:
         indEMClusters = range(len(emclusters))
         lResetExclusions = []
         numUserQueries = 0
+        for cl in emclusters:
+            print ([D.data[i.index].cl for i in cl.midpoints],D.data[cl.center.index].cl)," ",cl.center.index
+         
         while len(indEMClusters) != 0 and iters < 5:
-            print consistent," ",len(emclusters)
-            consistent = 0
+            
             resetCenters = []
             
             for ind in indEMClusters[:]:
                 cl = emclusters[ind]
-                if(len(cl.midpoints) == 0):
+                if(len(cl.midpoints) <= 1):
                     resetCenters.append(ind)
                     continue
 
@@ -60,7 +61,6 @@ class starts:
 
                 # All the leftovers...
                 if len(wrongclass) == 0:
-                    consistent += 1
                     indEMClusters.remove(ind)
                     lResetExclusions.extend( [x.index for x in rightclass] )
                 else:
@@ -77,7 +77,6 @@ class starts:
                     em.mCij[i[0]][i[1]] = i[2]
                     em.mCij[i[1]][i[0]] = i[2]
 
-            print consistent
             # If all classes are not right, restart.
             em.resetSomeCenters(em.lInitialCenters,resetCenters,lResetExclusions)
             em.EM(len(emclusters))
@@ -92,6 +91,10 @@ class starts:
                                           len(constraints),
                                           em.dEMLikelihood,
                                           evaluateEM_NMI(D,em) ) )
+            print indEMClusters
+            for cl in emclusters:
+                print ([D.data[i.index].cl for i in cl.midpoints],D.data[cl.center.index].cl)," ",cl.center.index
+            
         
         return em
 

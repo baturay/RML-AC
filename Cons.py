@@ -137,9 +137,11 @@ class cCons:
      maxindices = np.ravel(gammas.argmax(1).T)
      gammas = gammas.tolist()
      for i,gamma in enumerate(gammas):
-         secondprob= -np.inf
+         
          firstindex = maxindices[i]
          firstprob = gamma[firstindex]
+         secondindex = 0
+         secondprob= -np.inf
          for j in range(len(gamma)):
             if (gamma[j] > secondprob) and (j!=firstindex):
                secondindex = j

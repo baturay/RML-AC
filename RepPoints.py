@@ -58,7 +58,6 @@ class RepPoints:
             # Other outerpoints are found by finding the maxmin of a point.
             if(len(cl.points) <= self.numMidpoints):
                 cl.midpoints = cl.points[:]
-                print [EM.mData.data[i.index].cl for i in cl.midpoints],EM.mData.data[cl.center.index].cl
                 continue
             for i in range(self.numMidpoints-1):
                 odist = max(self.findMin(cl.outerpoints,cl),key = lambda x : x[1])                     
@@ -66,7 +65,6 @@ class RepPoints:
                 cl.points.remove(odist[0])
             if(len(cl.points) <= self.numMidpoints):
                 cl.midpoints = cl.points[:]
-                print [EM.mData.data[i.index].cl for i in cl.midpoints],EM.mData.data[cl.center.index].cl
                 continue          
             for o in cl.outerpoints:
                 midvalues = []
@@ -80,7 +78,7 @@ class RepPoints:
                 cl.midpoints.append(mdist[0])
                 cl.points.remove(mdist[0])
             
-            print [EM.mData.data[i.index].cl for i in cl.midpoints],EM.mData.data[cl.center.index].cl
+           
 
     # return a list of distances from each point in the cluster
     # to the closest source
