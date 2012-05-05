@@ -9,10 +9,14 @@ from cData import *
 import random
 import sys
 import copy
+import pdb
+import collections
 
 # this module contains a class that performs EM
 # clustering.  The input data is in the 'machine' format
 # given in data.py
+
+epsilon = 1e-250
 
 class cEM:
     def __init__(self, _mData):
@@ -75,9 +79,32 @@ class cEM:
     # the P_l and the Sigma_l
     def clusterMembership(self, nData, nDataDim, lCenters, lPl, lSig, bPPC):
         coef = 1/(double(2*np.pi)**(nDataDim/double(2)))
+        sigCoefs = [ 1/np.sqrt(np.linalg.det(sig)) for sig in lSig ]
+
+        # if we got inf in sigCoefs (caused by certain matrix conditions of sig)
+        # change the formula used to calculate the coefficient from
+        # 1/sqrt(det(sig)) to sqrt(10^m) * 1/sqrt(det(10*sig))
+        for sigI in range(len(lSig)):
+            if sigCoefs[sigI] == inf:
+                sig = lSig[sigI]
+                trymult = 10.0
+                tryval = inf
+                while tryval == inf:
+                    if trymult > 1000:
+                        pdb.set_trace()
+                    print "trymult,tryval, pow:",
+                    print trymult,
+                    print tryval,
+                    print np.sqrt(pow(trymult,nDataDim))
+                    tryval = np.sqrt(pow(trymult,nDataDim)) * (1/np.sqrt(np.linalg.det(trymult*sig)))
+                    trymult *= 10
+                sigCoefs[sigI] = tryval
+
+        if inf in sigCoefs:
+            pdb.set_trace()
+
         if self.bVerbose:
             print "lsig: " , lSig[0].shape
-        sigCoefs = [ 1/np.sqrt(np.linalg.det(sig)) for sig in lSig ]
 
         if self.bVerbose:
             print "lpl: " , lPl
@@ -102,7 +129,8 @@ class cEM:
             except:
                 print "singular handled"
                 print C
-                C = C + 1e-10 * np.eye(len(C))
+                pdb.set_trace()
+                C = C + epsilon * np.eye(len(C))
                 C = C.I
                 
             #g_EM =  A * np.exp(-0.5 * B * C * B.T )
@@ -138,7 +166,7 @@ class cEM:
             # since k exp(M-log(k)) = exp(M)  ( 1 is for rounding error)
             rowmaxs = G.max(axis=1)
             k = G.shape[1]
-            maxval = 709 - np.log(k)
+            maxval = 700 - np.log(k) # was 709
 
             # fix G before applying exponent (as explained above)
             # * this syntax lets us fix each row and stack them back
@@ -150,6 +178,7 @@ class cEM:
 
             G = np.exp(G)
             rowsums = G.sum(axis=1)  # matrix  |row| x 1
+            #print "rowsums: ", rowsums
             nG = G / rowsums
             
             if nG.min() == 0:
@@ -289,12 +318,29 @@ class cEM:
 
             # ***** OPT... each elem should be a matrix
             lSig = [ np.multiply(1/lNl[l],
-                                 reduce(lambda x,y: x+ y,
+                                 reduce(lambda x,y: x + y,
                                         [ np.multiply(self.mGammas[i,l],
                                                       aXMuDiff[l][i].T *
                                                       aXMuDiff[l][i]) 
                                           for i in range(nData) ] ) )
                      for l in range(len(self.lCenters)) ]
+            # in all Sig matrices, eliminate diagonal entries that
+            # are too low (they cause underflow type errors in inversion)
+            # * 1e-308 is the magic number such that if the last row and
+            #   column are zeros except this number is on the diagonal
+            #   the matrix can be inverted cleanly (any lower and there
+            #   are a lot of nan values)
+            for S in lSig:
+                ww = np.where(S < 1e-308)
+                for w in range(ww[0].shape[1]):
+                    wi = ww[0][0,w]
+                    wj = ww[1][0,w]
+                    if wi == wj:
+                        S[wi,wj] = 1e-308
+                if np.linalg.det(S) == 0:
+                    S = S + epsilon * np.eye(len(S))
+            
+            # supposedly faster alternative... slower in my tests
             #lSig = [ np.multiply(1/lNl[l],
             #                     np.add.reduce(
             #                       np.fromfunction( np.vectorize(
@@ -304,6 +350,10 @@ class cEM:
             #                                          aXMuDiff[l][int(i)]) ),
             #                         (nData,) ) ))
             #                     for l in range(len(self.lCenters)) ]
+
+            mems = self.Membership()
+            countcol = collections.Counter(mems)
+            print "membership: ", [ cnt for elt,cnt in countcol.most_common() ]
 
             if self.bEMLikelihoodEachStep:
                 ll = EMLikelihood()
