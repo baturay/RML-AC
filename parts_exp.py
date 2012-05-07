@@ -11,8 +11,8 @@ import sys
 import pickle
 import copy
 
-numOuterTrials = 10
-numInnerTrials = 10
+numOuterTrials = 2
+numInnerTrials = 2
 
 # runs scenario 1 tests (just EM alone)
 # * takes a cData object and a stub name for output files

@@ -9,7 +9,6 @@ from cData import *
 import random
 import sys
 import copy
-import pdb
 import collections
 
 # this module contains a class that performs EM
@@ -90,8 +89,8 @@ class cEM:
                 trymult = 10.0
                 tryval = inf
                 while tryval == inf:
-                    if trymult > 1000:
-                        pdb.set_trace()
+                    #if trymult > 1000:
+                    #    pdb.set_trace()
                     print "trymult,tryval, pow:",
                     print trymult,
                     print tryval,
@@ -100,8 +99,8 @@ class cEM:
                     trymult *= 10
                 sigCoefs[sigI] = tryval
 
-        if inf in sigCoefs:
-            pdb.set_trace()
+        #if inf in sigCoefs:
+        #    pdb.set_trace()
 
         if self.bVerbose:
             print "lsig: " , lSig[0].shape
@@ -129,7 +128,7 @@ class cEM:
             except:
                 print "singular handled"
                 print C
-                pdb.set_trace()
+                #pdb.set_trace()
                 C = C + epsilon * np.eye(len(C))
                 C = C.I
                 

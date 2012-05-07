@@ -60,7 +60,7 @@ class RepPoints:
                 cl.midpoints = cl.points[:]
                 continue
             for i in range(self.numMidpoints-1):
-                odist = max(self.findMin(cl.outerpoints,cl),key = lambda x : x[1])                     
+                odist = max(self.findMin(cl.outerpoints,cl),key = lambda x : x[1])
                 cl.outerpoints.append(odist[0])
                 cl.points.remove(odist[0])
             if(len(cl.points) <= self.numMidpoints):
